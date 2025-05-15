@@ -1,50 +1,96 @@
-# Welcome to your Expo app 👋
+---
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+# **ATM - Application de Géolocalisation des Distributeurs** 🏧📍  
 
-## Get started
+**Développée avec React Native & Expo**  
+*Projet collaboratif - Équipe : Rooney, Christian, Yves, Caldie, Glodis, Therese, Gladis, Pauline, Ignace, Josue*  
 
-1. Install dependencies
-q
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
+## **📌 Guide de Démarrage Rapide**  
+*(Pour les développeurs et contributeurs techniques)*  
 
-   ```bash
-   npx expo start
-   ```
+### **1. Prérequis**  
+- Installer [Node.js](https://nodejs.org/) (v18+)  
+- Installer [Git](https://git-scm.com/)  
+- **Optionnel** :  
+  - [Expo Go](https://expo.dev/client) (pour tester sur mobile)  
+  - Android Studio (émulateur Android) / Xcode (émulateur iOS)  
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+### **2. Cloner le Projet**  
 ```bash
-npm run reset-project
+git clone https://github.com/chris-mayamba/ATM.git
+cd ATM
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### **3. Installer les Dépendances**  
+```bash
+npm install
+```
 
-## Learn more
+### **4. Démarrer l'Application**  
+```bash
+npx expo start
+```  
+- **Choix possibles après le lancement** :  
+  - 📱 **Expo Go** : Scannez le QR code avec votre téléphone (app Expo Go installée).  
+  - 💻 **Émulateur** : Appuyez sur `i` (iOS) ou `a` (Android) dans le terminal.  
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## **🛠 Pour les Non-Développeurs**  
+*(Comment contribuer sans coder ?)*  
 
-## Join the community
+### **1. Tester l'Application**  
+- Téléchargez **Expo Go** sur votre smartphone.  
+- Scannez le QR code partagé par l’équipe (via Slack/email).  
+- Signalez les bugs via [GitHub Issues](https://github.com/votre-repo/atm-finder/issues) avec :  
+  - 📸 Capture d’écran  
+  - 📝 Description du problème  
 
-Join our community of developers creating universal apps.
+### **2. Participer au Design**  
+- Accédez aux maquettes sur [Figma](lien-figma) .  
+- Donnez votre avis sur les couleurs/ergonomie via les commentaires Figma.  
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### **3. Documentation**  
+- Aidez à rédiger le guide utilisateur dans le dossier `/docs`.  
+- Proposez des idées de fonctionnalités dans [ce fichier](lien-google-doc).  
+
+---
+
+## **📂 Structure du Projet**  
+```markdown
+ATM/
+├── app/               # Code principal
+│   ├── components/    # Boutons, cartes, etc.
+│   ├── screens/       # Écrans (Login, Carte, etc.)
+│   └── utils/         # Fonctions utilitaires
+├── assets/            # Images/icons
+├── .github/           # Configurations GitHub
+└── README.md          # Ce fichier
+```
+
+---
+
+## **🚀 Fonctionnalités Clés**  
+- ✅ Géolocalisation des ATM proches  
+- ✅ Filtres par banque/services  
+- ✅ Itinéraire vers un ATM  
+- ✅ Authentification utilisateur  
+
+---
+
+## **💡 Besoin d’Aide ?**  
+- **Développeurs** : Contactez Rooney ou Christian ou Yves ainsi qu'un autres memebres de l'equipe.  
+
+---
+
+## **📅 Prochaines Étapes**  
+- **Roadmap** : Voir [ce tableau Trello](lien-trello) pour les tâches en cours.  
+
+---
+
+**✨ Merci à toute l’équipe pour votre contribution !**  
+*—  l’équipe ATM *  
+
+--- 
