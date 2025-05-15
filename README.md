@@ -1,11 +1,8 @@
----
-
 # **ATM - Application de Géolocalisation des Distributeurs  🏧📍**  
 
 **Développée avec React Native & Expo**  
 *Projet collaboratif - Équipe : Rooney, Christian, Yves, Caldie, Glodis, Therese, Gladis, Pauline, Ignace, Josue*  
 
----
 
 ## **📌 Guide de Démarrage Rapide**  
 *(Pour les développeurs et contributeurs techniques)*  
