@@ -5,7 +5,6 @@ import {
   TextInput,
   Button,
   TouchableOpacity,
-  // CheckBox,
   useColorScheme,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -21,6 +20,7 @@ export default function LoginScreen() {
   const isDark = colorScheme === "dark";
 
   const handleLogin = async () => {
+    console.log("Tentative de connexion...");
     try {
       const response = await fetch(
         "http://192.168.50.51/projet_tutore/api/login.php",
@@ -34,12 +34,13 @@ export default function LoginScreen() {
       if (data.success) {
         setMessage("Connexion réussie !");
         setTimeout(() => {
-          router.replace("/home");
+          router.replace({ pathname: "/home", params: { nom: data.user.nom } });
         }, 1000);
       } else {
         setMessage(data.message);
       }
     } catch (error) {
+      console.log(error);
       setMessage("Erreur de connexion");
     }
   };
@@ -179,16 +180,8 @@ export default function LoginScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-      <TouchableOpacity onPress={() => router.push("/register")}>
-        <Text
-          style={{
-            color: "#007aff",
-            marginTop: 10,
-            textDecorationLine: "underline",
-          }}
-        >
-          New Here ? Sign up
-        </Text>
+      <TouchableOpacity onPress={() => router.push('/register')}>
+        <Text style={{ color: '#007aff' }}>New Here ? Sign up</Text>
       </TouchableOpacity>
       {message ? (
         <Text

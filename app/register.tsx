@@ -187,15 +187,7 @@ export default function RegisterScreen() {
         </TouchableOpacity>
       </View>
       <TouchableOpacity onPress={() => router.replace('/')}>
-        <Text
-          style={{
-            color: '#007aff',
-            marginTop: 10,
-            textDecorationLine: 'underline',
-          }}
-        >
-          Already have an account? Sign in
-        </Text>
+        <Text style={{ color: '#007aff' }}>Already have an account? Sign in</Text>
       </TouchableOpacity>
       {message ? (
         <Text
