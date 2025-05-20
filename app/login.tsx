@@ -4,18 +4,17 @@ import { useSession } from '../ctx';
 import { useRouter } from 'expo-router';
 import InputWithIcon from '../components/InputWithIcon';
 
-export default function RegisterScreen() {
-  const [name, setName] = useState('');
+export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { register } = useSession();
+  const { login } = useSession();
   const router = useRouter();
   const isDark = useColorScheme() === 'dark';
 
-  const handleRegister = async () => {
+  const handleLogin = async () => {
     try {
-      await register(name, email, password);
+      await login(email, password);
     } catch (e) {
       setError(e.message);
     }
@@ -26,15 +25,8 @@ export default function RegisterScreen() {
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: bgColor }}>
-      <Text style={{ fontSize: 30, fontWeight: 'bold', color: textColor, marginBottom: 30, textAlign: 'center' }}>Create Account</Text>
+      <Text style={{ fontSize: 30, fontWeight: 'bold', color: textColor, marginBottom: 30, textAlign: 'center' }}>Login</Text>
 
-      <InputWithIcon
-        icon="user"
-        placeholder="Name"
-        value={name}
-        onChangeText={setName}
-        isDark={isDark}
-      />
       <InputWithIcon
         icon="mail"
         placeholder="Email"
@@ -54,17 +46,17 @@ export default function RegisterScreen() {
 
       {error && <Text style={{ color: 'red', marginBottom: 10, textAlign: 'center' }}>{error}</Text>}
 
-      <Pressable onPress={handleRegister} style={{
+      <Pressable onPress={handleLogin} style={{
         backgroundColor: '#007aff',
         paddingVertical: 14,
         borderRadius: 25,
         alignItems: 'center'
       }}>
-        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Register</Text>
+        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Login</Text>
       </Pressable>
 
-      <TouchableOpacity onPress={() => router.replace('/login')} style={{ marginTop: 25 }}>
-        <Text style={{ color: '#007aff', textAlign: 'center' }}>Already have an account? Login</Text>
+      <TouchableOpacity onPress={() => router.push('/register')} style={{ marginTop: 25 }}>
+        <Text style={{ color: '#007aff', textAlign: 'center' }}>Don't have an account? Register</Text>
       </TouchableOpacity>
     </View>
   );
