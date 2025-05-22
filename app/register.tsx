@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, useColorScheme, Pressable } from 'react-n
 import { useSession } from '../ctx';
 import { useRouter } from 'expo-router';
 import InputWithIcon from '../components/InputWithIcon';
+import * as Location from 'expo-location';
+
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -13,13 +15,25 @@ export default function RegisterScreen() {
   const router = useRouter();
   const isDark = useColorScheme() === 'dark';
 
-  const handleRegister = async () => {
-    try {
-      await register(name, email, password);
-    } catch (e) {
-      setError(e.message);
+const handleRegister = async () => {
+  try {
+    // 1. Demander la permission
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      setError('Permission de localisation refusée');
+      return;
     }
-  };
+
+    // 2. Récupérer la position
+    const location = await Location.getCurrentPositionAsync({});
+    const { latitude, longitude } = location.coords;
+
+    // 3. Appeler `register()` avec les coordonnées
+    await register(name, email, password, { latitude, longitude });
+  } catch (e) {
+    setError(e.message);
+  }
+};
 
   const bgColor = isDark ? '#000' : '#f2f2f2';
   const textColor = isDark ? '#fff' : '#000';
