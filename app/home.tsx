@@ -3,6 +3,8 @@ import React from 'react';
 import { View, Text, Button, useColorScheme, StyleSheet, Dimensions } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useSession } from '../ctx';
+import { Tabs } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 export default function Home() {
   const { user, logout } = useSession();
@@ -14,11 +16,7 @@ export default function Home() {
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#fff' }]}>
-      <Text style={[styles.welcomeText, { color: isDark ? '#fff' : '#000' }]}>
-        Welcome, {user?.name}
-      </Text>
-
-      <MapView
+            <MapView
         style={styles.map}
         initialRegion={{
           latitude,
