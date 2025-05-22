@@ -1,10 +1,11 @@
 // File: app/home.js
 import React from 'react';
-import { View, Text, Button, useColorScheme, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Button, useColorScheme, StyleSheet, Dimensions, TextInput } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { useSession } from '../ctx';
+import { useSession } from '../../ctx';
 import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import ProfileScreen from '../profile';
 
 export default function Home() {
   const { user, logout } = useSession();
@@ -14,9 +15,23 @@ export default function Home() {
   const latitude = user?.prefs?.latitude || -11.6609;
   const longitude = user?.prefs?.longitude || 27.4794;
 
-  return (
+return (
     <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#fff' }]}>
-            <MapView
+      {/* Barre de recherche */}
+      <TextInput
+        placeholder="Rechercher un lieu ou ATM"
+        placeholderTextColor={isDark ? '#ccc' : '#666'}
+        style={[
+          styles.searchInput,
+          {
+            backgroundColor: isDark ? '#333' : '#f0f0f0',
+            color: isDark ? '#fff' : '#000',
+          },
+        ]}
+      />
+
+      {/* Carte avec position */}
+      <MapView
         style={styles.map}
         initialRegion={{
           latitude,
@@ -27,14 +42,15 @@ export default function Home() {
       >
         <Marker
           coordinate={{ latitude, longitude }}
-          title="You are here"
+          title="Vous êtes ici"
           description={`${latitude}, ${longitude}`}
         />
       </MapView>
 
-      <View style={styles.buttonContainer}>
-        <Button title="Logout" onPress={logout} color="#FF3B30" />
-      </View>
+      {/* Bouton logout */}
+      {/* <View style={styles.buttonContainer}>
+        <Button title="Se déconnecter" onPress={logout} color="#FF3B30" />
+      </View> */}
     </View>
   );
 }
@@ -44,16 +60,18 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 40,
   },
-  welcomeText: {
-    fontSize: 22,
-    textAlign: 'center',
-    marginBottom: 10,
-  },
   map: {
     flex: 1,
     width: Dimensions.get('window').width,
   },
   buttonContainer: {
     padding: 10,
+  },
+  searchInput: {
+    height: 40,
+    marginHorizontal: 10,
+    marginBottom: 10,
+    borderRadius: 8,
+    paddingHorizontal: 10,
   },
 });
