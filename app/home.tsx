@@ -8,6 +8,10 @@ export default function Home() {
   const { user, logout } = useSession();
   const isDark = useColorScheme() === 'dark';
 
+  // Récupère les coordonnées GPS depuis les préférences utilisateur
+  const latitude = user?.prefs?.latitude || -11.6609;
+  const longitude = user?.prefs?.longitude || 27.4794;
+
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#fff' }]}>
       <Text style={[styles.welcomeText, { color: isDark ? '#fff' : '#000' }]}>
@@ -17,16 +21,16 @@ export default function Home() {
       <MapView
         style={styles.map}
         initialRegion={{
-          latitude: -11.6609, // Lubumbashi par exemple
-          longitude: 27.4794,
+          latitude,
+          longitude,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}
       >
         <Marker
-          coordinate={{ latitude: -11.6609, longitude: 27.4794 }}
+          coordinate={{ latitude, longitude }}
           title="You are here"
-          description="Lubumbashi"
+          description={`${latitude}, ${longitude}`}
         />
       </MapView>
 

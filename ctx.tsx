@@ -34,9 +34,24 @@ export const SessionProvider = ({ children }) => {
     router.replace('/home');
   };
 
-  const register = async (name, email, password) => {
+  const register = async (name, email, password, location = null) => {
+    // Crée le compte
     await account.create('unique()', email, password, name);
+
+    // Se connecte après création
     await login(email, password);
+
+    // Met à jour les préférences avec la localisation (si disponible)
+    if (location) {
+      await account.updatePrefs({
+        latitude: location.latitude,
+        longitude: location.longitude,
+      });
+
+      // Rafraîchir les données utilisateur après update
+      const updatedUser = await account.get();
+      setUser(updatedUser);
+    }
   };
 
   const logout = async () => {
@@ -53,4 +68,3 @@ export const SessionProvider = ({ children }) => {
 };
 
 export const useSession = () => useContext(SessionContext);
-
