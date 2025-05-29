@@ -16,8 +16,9 @@ export default function ProfileScreen() {
 
   const toggleSwitch = () => setIsDarkTheme((prev) => !prev);
 
-  const backgroundColor = isDarkTheme ? "#000" : "#fff";
-  const textColor = isDarkTheme ? "#fff" : "#000";
+  const backgroundColor = isDarkTheme ? "#121212" : "#f9f9f9";
+  const cardColor = isDarkTheme ? "#1e1e1e" : "#ffffff";
+  const textColor = isDarkTheme ? "#ffffff" : "#333";
 
   const historique = [
     { id: "1", nom: "ATM1", date: "17/05/2025", operation: "Retrait" },
@@ -26,16 +27,25 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <Text style={[styles.headerTitle, { color: textColor }]}>
-        Profile
+      <Text style={[styles.headerTitle, { color: textColor }]}>Profil</Text>
+
+      {/* Avatar / Initiale */}
+      <View style={[styles.avatarContainer, { backgroundColor: cardColor }]}>
+        <Text style={[styles.avatarText, { color: textColor }]}>
+          {user?.name?.charAt(0).toUpperCase() || "?"}
         </Text>
+      </View>
 
-      <View style={styles.avatar} />
+      {/* Infos utilisateur */}
+      <View style={[styles.infoCard, { backgroundColor: cardColor }]}>
+        <Text style={[styles.infoLabel, { color: textColor }]}>Nom :</Text>
+        <Text style={[styles.infoText, { color: textColor }]}>{user?.name}</Text>
 
-      <Text style={[styles.welcomeText, { color: textColor }]}>
-        Bonjour {user?.name || "Invité"}
-      </Text>
+        <Text style={[styles.infoLabel, { color: textColor }]}>Email :</Text>
+        <Text style={[styles.infoText, { color: textColor }]}>{user?.email}</Text>
+      </View>
 
+      {/* Thème */}
       <View style={styles.switchContainer}>
         <Text style={{ color: textColor }}>Thème sombre</Text>
         <Switch
@@ -46,100 +56,103 @@ export default function ProfileScreen() {
         />
       </View>
 
-      {/* ✅ Bouton Logout déplacé ici */}
-      <View style={styles.logoutButton}>
-        <Button title="Logout" onPress={logout} color="#FF3B30" />
-      </View>
-
-      <Text style={[styles.historiqueTitle, { color: textColor }]}>
-        Historique
-      </Text>
-
-      <View style={styles.tableHeader}>
-        <Text style={styles.tableHeaderCell}>Nom</Text>
-        <Text style={styles.tableHeaderCell}>Date</Text>
-        <Text style={styles.tableHeaderCell}>Opération</Text>
-      </View>
-
+      {/* Historique */}
+      <Text style={[styles.historiqueTitle, { color: textColor }]}>Historique</Text>
       <FlatList
         data={historique}
         keyExtractor={(item) => item.id}
+        style={{ width: "90%" }}
+        ListEmptyComponent={
+          <Text style={{ color: textColor, textAlign: "center", marginTop: 10 }}>
+            Aucun historique disponible
+          </Text>
+        }
         renderItem={({ item }) => (
-          <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>{item.nom}</Text>
-            <Text style={styles.tableCell}>{item.date}</Text>
-            <Text style={styles.tableCell}>{item.operation}</Text>
+          <View style={[styles.historiqueCard, { backgroundColor: cardColor }]}>
+            <Text style={[styles.historiqueText, { color: textColor }]}>
+              🏧 {item.nom}
+            </Text>
+            <Text style={[styles.historiqueText, { color: textColor }]}>
+              📅 {item.date}
+            </Text>
+            <Text style={[styles.historiqueText, { color: textColor }]}>
+              🔄 {item.operation}
+            </Text>
           </View>
         )}
-        style={styles.table}
       />
+
+      {/* Déconnexion */}
+      <View style={styles.logoutButton}>
+        <Button title="Se déconnecter" onPress={logout} color="#FF3B30" />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerTitle: {
-  fontSize: 24,
-  fontWeight: 'bold',
-  marginBottom: 20,
-  textTransform: 'uppercase',
-},
-
   container: {
     flex: 1,
     alignItems: "center",
     paddingTop: 20,
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 2,
-    borderColor: "#aaa",
-    marginVertical: 20,
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 15,
   },
-  welcomeText: {
-    fontSize: 18,
-    fontWeight: "500",
+  avatarContainer: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    marginBottom: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 4,
+  },
+  avatarText: {
+    fontSize: 36,
+    fontWeight: "bold",
+  },
+  infoCard: {
+    padding: 16,
+    borderRadius: 12,
+    marginVertical: 12,
+    width: "90%",
+    elevation: 2,
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 8,
+  },
+  infoText: {
+    fontSize: 16,
+    marginBottom: 4,
   },
   switchContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginVertical: 10,
+    marginVertical: 16,
   },
   historiqueTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
-    marginTop: 20,
-    marginBottom: 10,
+    marginVertical: 10,
   },
-  table: {
-    width: "90%",
+  historiqueCard: {
+    padding: 14,
+    borderRadius: 10,
+    marginVertical: 6,
+    elevation: 2,
   },
-  tableHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#ddd",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  tableHeaderCell: {
-    flex: 1,
-    fontWeight: "700",
-  },
-  tableRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-  },
-  tableCell: {
-    flex: 1,
+  historiqueText: {
+    fontSize: 14,
+    marginBottom: 4,
   },
   logoutButton: {
-    marginTop: 10,
+    marginTop: 20,
+    width: "80%",
   },
 });
