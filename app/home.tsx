@@ -44,14 +44,21 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 40,
   },
+  map: {
+    flex: 1,
+    width: Dimensions.get("window").width,
+  },
+  searchInput: {
+    height: 40,
+    marginHorizontal: 10,
+    marginBottom: 10,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
   welcomeText: {
     fontSize: 22,
     textAlign: 'center',
     marginBottom: 10,
-  },
-  map: {
-    flex: 1,
-    width: Dimensions.get('window').width,
   },
   buttonContainer: {
     padding: 10,
