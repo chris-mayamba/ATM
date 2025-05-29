@@ -27,6 +27,8 @@ export default function LoginScreen() {
     <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: bgColor }}>
       <Text style={{ fontSize: 30, fontWeight: 'bold', color: textColor, marginBottom: 30, textAlign: 'center' }}>Login</Text>
 
+
+
       <InputWithIcon
         icon="mail"
         placeholder="Email"
