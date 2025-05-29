@@ -31,6 +31,39 @@ export default function Home() {
     longitudeDelta: 0.05,
   });
 
+  const [atmMarkers, setAtmMarkers] = useState([]);
+
+  // ✅ Fonction pour récupérer UNIQUEMENT les ATM "Equity"
+  const fetchNearbyATMs = async (lat = region.latitude, lon = region.longitude) => {
+    const radius = 10000; // rayon de recherche
+    const query = `
+      [out:json];
+      node["amenity"="atm"]["operator"~"Equity"](around:${radius},${lat},${lon});
+      out;
+    `;
+
+    try {
+      const response = await fetch(
+        https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}
+      );
+      const data = await response.json();
+
+      console.log("ATM trouvés :", data.elements);
+
+      const markers = data.elements.map((atm) => ({
+        id: atm.id,
+        lat: atm.lat,
+        lon: atm.lon,
+        name: atm.tags?.operator || "Equity Bank",
+      }));
+
+      setAtmMarkers(markers);
+    } catch (error) {
+      console.error("Erreur lors du chargement des ATM :", error);
+      Alert.alert("Erreur", "Impossible de récupérer les ATM.");
+    }
+  };
+
   // Fonction asynchrone pour récupérer la position GPS actuelle
   const getCurrentLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
