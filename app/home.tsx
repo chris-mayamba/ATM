@@ -35,10 +35,10 @@ export default function Home() {
       <View style={styles.buttonContainer}>
         <Button title="Logout" onPress={logout} color="#FF3B30" />
       </View>
+
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
