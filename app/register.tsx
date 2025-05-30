@@ -68,13 +68,14 @@ const handleRegister = async () => {
 
       {error && <Text style={{ color: 'red', marginBottom: 10, textAlign: 'center' }}>{error}</Text>}
 
+
       <Pressable onPress={handleRegister} style={{
         backgroundColor: '#007aff',
         paddingVertical: 14,
         borderRadius: 25,
         alignItems: 'center'
       }}>
-        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Register</Text>
+        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Register</Text>
       </Pressable>
 
       <TouchableOpacity onPress={() => router.replace('/login')} style={{ marginTop: 25 }}>
