@@ -8,6 +8,8 @@ export default function Index() {
   const { user, loading } = useSession();
   const router = useRouter();
 
+
+  
   useEffect(() => {
     if (!loading) {
       router.replace(user ? '/home' : '/login');
