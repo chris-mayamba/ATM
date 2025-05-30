@@ -1,57 +1,66 @@
-import { useRouter } from 'expo-router'; // Importer le router
-
+// File: app/home.js
 import React from 'react';
-import { Button, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { View, Text, Button, useColorScheme, StyleSheet, Dimensions } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import { useSession } from '../ctx';
+import { Tabs } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
-export default function NomDeTaPage() {
-    const router = useRouter(); // Initialiser le router
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const isLight = colorScheme === 'light';
+export default function Home() {
+  const { user, logout } = useSession();
+  const isDark = useColorScheme() === 'dark';
 
-  
-  const handleLogout = async () => {
-    await clearSession();
-    router.replace('/login'); // Rediriger vers la page de connexion
-  };
+  // Récupère les coordonnées GPS depuis les préférences utilisateur
+  const latitude = user?.prefs?.latitude || -11.6609;
+  const longitude = user?.prefs?.longitude || 27.4794;
 
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: isDark ? '#181818' : '#fff',
-      }}
-    >
-      <Text style={{ color: isDark ? '#fff' : '#181818', fontSize: 20 }}>
-        Titre ou message de la page
-      </Text>
-      {/* Exemple d'input adapté */}
-      <TextInput
-        placeholder="Votre texte"
-        placeholderTextColor={isDark ? '#aaa' : '#555'}
-        style={{
-          color: isDark ? '#fff' : '#181818',
-          borderColor: isDark ? '#fff' : '#181818',
-          borderWidth: 1,
-          marginTop: 20,
-          padding: 8,
-          width: 250,
+    <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#fff' }]}>
+            <MapView
+        style={styles.map}
+        initialRegion={{
+          latitude,
+          longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
         }}
-      />
-      {/* Exemple de bouton */}
-      <Button title="Valider" onPress={() => {}} color={isDark ? '#fff' : '#181818'} />
-      {/* Exemple de lien */}
-      <TouchableOpacity>
-        <Text style={{ color: isDark ? '#4fa3ff' : '#007aff', marginTop: 20 }}>
-          Lien ou action
-        </Text>
-      </TouchableOpacity>
+      >
+        <Marker
+          coordinate={{ latitude, longitude }}
+          title="You are here"
+          description={`${latitude}, ${longitude}`}
+        />
+      </MapView>
+
+      <View style={styles.buttonContainer}>
+        <Button title="Logout" onPress={logout} color="#FF3B30" />
+      </View>
+
     </View>
   );
 }
-
-function clearSession() {
-  throw new Error('Function not implemented.');
-}
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingTop: 40,
+  },
+  map: {
+    flex: 1,
+    width: Dimensions.get("window").width,
+  },
+  searchInput: {
+    height: 40,
+    marginHorizontal: 10,
+    marginBottom: 10,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
+  welcomeText: {
+    fontSize: 22,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  buttonContainer: {
+    padding: 10,
+  },
+});
