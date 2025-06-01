@@ -4,7 +4,8 @@ import { useSession } from '../ctx';
 import { useRouter } from 'expo-router';
 import InputWithIcon from '../components/InputWithIcon';
 import * as Location from 'expo-location';
-
+import GlassCard from '@/components/Card';
+const logo = require('@/assets/images/logo.png');
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -35,11 +36,21 @@ const handleRegister = async () => {
   }
 };
 
+  const cardBgColor = isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.7)';
   const bgColor = isDark ? '#000' : '#f2f2f2';
   const textColor = isDark ? '#fff' : '#000';
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: bgColor }}>
+    <GlassCard
+            style={{
+              flex: 2/3,
+              backgroundColor: cardBgColor,
+              padding: 20,
+              height: '200px',
+            }}
+            logo={logo}
+          >
       <Text style={{ fontSize: 30, fontWeight: 'bold', color: textColor, marginBottom: 30, textAlign: 'center' }}>Create Account</Text>
 
       <InputWithIcon
@@ -65,10 +76,7 @@ const handleRegister = async () => {
         isDark={isDark}
       />
 
-
       {error && <Text style={{ color: 'red', marginBottom: 10, textAlign: 'center' }}>{error}</Text>}
-
-
       <Pressable onPress={handleRegister} style={{
         backgroundColor: '#007aff',
         paddingVertical: 14,
@@ -81,6 +89,7 @@ const handleRegister = async () => {
       <TouchableOpacity onPress={() => router.replace('/login')} style={{ marginTop: 25 }}>
         <Text style={{ color: '#007aff', textAlign: 'center' }}>Already have an account? Login</Text>
       </TouchableOpacity>
+      </GlassCard>
     </View>
   );
 }
