@@ -240,6 +240,8 @@ export default function Home() {
               </Text>
             )}
 
+            <Text style={styles.modalText}>Disponibilité : </Text>
+
             <TouchableOpacity
               style={styles.confirmBtn}
               onPress={() => setShowModal(false)}
