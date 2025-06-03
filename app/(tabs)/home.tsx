@@ -68,11 +68,15 @@ export default function Home() {
     setIsLoading(true);
     try {
       const query = `[out:json];
-        node["amenity"="atm"](${region.latitude - 0.1},${region.longitude - 0.1},${region.latitude + 0.1},${region.longitude + 0.1});
+        node["amenity"="atm"](${region.latitude - 0.1},${
+        region.longitude - 0.1
+      },${region.latitude + 0.1},${region.longitude + 0.1});
         out;`;
 
       const response = await fetch(
-        `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
+        `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(
+          query
+        )}`
       );
 
       const data = await response.json();
@@ -154,11 +158,21 @@ export default function Home() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? "#000" : "#fff" }]}>
+    <View
+      style={[styles.container, { backgroundColor: isDark ? "#000" : "#fff" }]}
+    >
       {region && (
-        <MapView ref={mapRef} style={styles.map} region={region} showsUserLocation>
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          region={region}
+          showsUserLocation
+        >
           <Marker
-            coordinate={{ latitude: region.latitude, longitude: region.longitude }}
+            coordinate={{
+              latitude: region.latitude,
+              longitude: region.longitude,
+            }}
             title="Votre position"
             pinColor="blue"
           />
@@ -178,7 +192,11 @@ export default function Home() {
           ))}
 
           {routeCoords.length > 0 && (
-            <Polyline coordinates={routeCoords} strokeWidth={4} strokeColor="#00f" />
+            <Polyline
+              coordinates={routeCoords}
+              strokeWidth={4}
+              strokeColor="#00f"
+            />
           )}
         </MapView>
       )}
@@ -189,7 +207,11 @@ export default function Home() {
           onPress={fetchAllATMs}
           disabled={isLoading}
         >
-          {isLoading ? <ActivityIndicator color="#fff" /> : <Ionicons name="cash" size={24} color="#fff" />}
+          {isLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Ionicons name="cash" size={24} color="#fff" />
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -211,13 +233,29 @@ export default function Home() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{selectedATM?.title}</Text>
-            <Text>{selectedATM?.description}</Text>
-            {travelTime && <Text>Temps estimé : {travelTime} min</Text>}
+            <Text style={styles.modalText}>{selectedATM?.description}</Text>
+            {travelTime && (
+              <Text style={styles.modalText}>
+                Temps estimé : {travelTime} min
+              </Text>
+            )}
+
             <TouchableOpacity
               style={styles.confirmBtn}
               onPress={() => setShowModal(false)}
             >
-              <Text style={{ color: "white" }}>Démarrer l'itinéraire</Text>
+              <Text style={styles.buttonText}>Démarrer l'itinéraire</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.confirmBtn, { backgroundColor: "#dc3545" }]}
+              onPress={() => {
+                setShowModal(false);
+                setRouteCoords([]);
+                setTravelTime(null);
+              }}
+            >
+              <Text style={styles.buttonText}>Annuler</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -243,6 +281,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 3,
   },
+  buttonText: {
+    fontSize: 14, // identique à modalText
+    textAlign: "center", // centre le texte
+    flexWrap: "wrap", // autorise le retour à la ligne
+    color: "white", // pour être lisible sur fond coloré
+    fontWeight: "500", // optionnel : rend le texte un peu plus visible
+  },
   searchBar: {
     position: "absolute",
     top: 40,
@@ -261,22 +306,37 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    width: "80%",
+    width: "90%", // ← plus souple que un width fixe
+    maxWidth: 400,
     backgroundColor: "white",
     borderRadius: 10,
     padding: 20,
     alignItems: "center",
+  },
+  modalText: {
+    fontSize: 14,
+    textAlign: "center",
+    flexWrap: "wrap",
+    marginBottom: 10,
+    width: "100%",
+    color: "#333",
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 10,
   },
-  confirmBtn: {
+  buttonsContainer: {
+    width: "100%",
     marginTop: 15,
+  },
+  confirmBtn: {
     backgroundColor: "#007bff",
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 5,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 10,
+    width: "100%",
   },
 });
