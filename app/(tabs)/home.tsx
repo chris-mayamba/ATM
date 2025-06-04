@@ -36,6 +36,9 @@ export default function Home() {
   const [selectedATM, setSelectedATM] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [atmDisponibilities, setAtmDisponibilities] = useState<
+    Record<number, boolean>
+  >({});
 
   const getCurrentLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -115,6 +118,13 @@ export default function Home() {
     if (best) {
       setSelectedATM(best);
       setShowModal(true);
+
+      // Initialise disponibilité si elle n'existe pas encore
+      setAtmDisponibilities((prev) => ({
+        ...prev,
+        [best.id]: prev[best.id] ?? true,
+      }));
+
       getRouteToATM(best.coordinate);
     }
   };
@@ -186,6 +196,10 @@ export default function Home() {
               onPress={() => {
                 setSelectedATM(atm);
                 setShowModal(true);
+                setAtmDisponibilities((prev) => ({
+                  ...prev,
+                  [atm.id]: prev[atm.id] ?? true,
+                }));
                 getRouteToATM(atm.coordinate);
               }}
             />
@@ -240,15 +254,56 @@ export default function Home() {
               </Text>
             )}
 
+            <View style={styles.rowDisponibility}>
+              <Text
+                style={[
+                  styles.modalTextInline,
+                  {
+                    color: atmDisponibilities[selectedATM?.id]
+                      ? "green"
+                      : "red",
+                    fontWeight: "bold",
+                    marginRight: 10,
+                  },
+                ]}
+              >
+                Disponibilité :{" "}
+                {atmDisponibilities[selectedATM?.id]
+                  ? "Disponible"
+                  : "Indisponible"}
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.dispoToggleBtn,
+                  {
+                    backgroundColor: atmDisponibilities[selectedATM?.id]
+                      ? "#dc3545"
+                      : "#28a745",
+                  },
+                ]}
+                onPress={() =>
+                  setAtmDisponibilities((prev) => ({
+                    ...prev,
+                    [selectedATM?.id]: !prev[selectedATM?.id],
+                  }))
+                }
+              >
+                <Text style={styles.toggleText}>
+                  {atmDisponibilities[selectedATM?.id] ? "❌" : "✔️"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
-              style={styles.confirmBtn}
+              style={[styles.confirmBtn, { backgroundColor: "#007bff" }]}
               onPress={() => setShowModal(false)}
             >
               <Text style={styles.buttonText}>Démarrer l'itinéraire</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.confirmBtn, { backgroundColor: "#dc3545" }]}
+              style={[styles.confirmBtn, { backgroundColor: "#6c757d" }]}
               onPress={() => {
                 setShowModal(false);
                 setRouteCoords([]);
@@ -282,11 +337,11 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   buttonText: {
-    fontSize: 14, // identique à modalText
-    textAlign: "center", // centre le texte
-    flexWrap: "wrap", // autorise le retour à la ligne
-    color: "white", // pour être lisible sur fond coloré
-    fontWeight: "500", // optionnel : rend le texte un peu plus visible
+    fontSize: 14,
+    textAlign: "center",
+    flexWrap: "wrap",
+    color: "white",
+    fontWeight: "500",
   },
   searchBar: {
     position: "absolute",
@@ -306,7 +361,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    width: "90%", // ← plus souple que un width fixe
+    width: "90%",
     maxWidth: 400,
     backgroundColor: "white",
     borderRadius: 10,
@@ -321,22 +376,40 @@ const styles = StyleSheet.create({
     width: "100%",
     color: "#333",
   },
+  modalTextInline: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 10,
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 10,
   },
-  buttonsContainer: {
-    width: "100%",
-    marginTop: 15,
-  },
   confirmBtn: {
-    backgroundColor: "#007bff",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
     alignItems: "center",
     marginTop: 10,
     width: "100%",
+  },
+
+  rowDisponibility: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    flexWrap: "wrap",
+  },
+
+  dispoToggleBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+
+  toggleText: {
+    color: "white",
+    fontWeight: "bold",
   },
 });
