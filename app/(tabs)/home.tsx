@@ -39,6 +39,7 @@ export default function Home() {
   const [atmDisponibilities, setAtmDisponibilities] = useState<
     Record<number, boolean>
   >({});
+  const [comments, setComments] = useState<Record<string, string>>({});
 
   const getCurrentLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -295,6 +296,40 @@ export default function Home() {
               </TouchableOpacity>
             </View>
 
+            <View style={styles.commentInputContainer}>
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Laisser un commentaire..."
+                value={comments[`${selectedATM?.id}_${user?.id}`] || ""}
+                onChangeText={(text) =>
+                  setComments((prev) => ({
+                    ...prev,
+                    [`${selectedATM?.id}_${user?.id}`]: text,
+                  }))
+                }
+              />
+              <TouchableOpacity
+                style={styles.commentSendButton}
+                onPress={() => {
+                  const commentKey = `${selectedATM?.id}_${user?.id}`;
+                  const comment = comments[commentKey]?.trim();
+
+                  if (!comment) {
+                    Alert.alert(
+                      "Commentaire vide",
+                      "Veuillez entrer un commentaire avant de l’envoyer."
+                    );
+                    return;
+                  }
+
+                  console.log("Commentaire posté :", comment);
+                  Alert.alert("Merci !", "Votre commentaire a été enregistré.");
+                }}
+              >
+                <Ionicons name="send" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
               style={[styles.confirmBtn, { backgroundColor: "#007bff" }]}
               onPress={() => setShowModal(false)}
@@ -411,5 +446,34 @@ const styles = StyleSheet.create({
   toggleText: {
     color: "white",
     fontWeight: "bold",
+  },
+  commentInput: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 10,
+    textAlignVertical: "top",
+    flex: 1,
+    fontSize: 14,
+    color: "#333",
+  },
+  commentInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f0f0",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    width: "100%",
+    marginTop: 10,
+  },
+
+  commentSendButton: {
+    backgroundColor: "#007bff",
+    borderRadius: 20,
+    padding: 8,
+    marginLeft: 8,
   },
 });
