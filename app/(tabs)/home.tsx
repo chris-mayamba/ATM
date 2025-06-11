@@ -58,6 +58,9 @@ export default function Home() {
   const [selectedATM, setSelectedATM] = useState<ATMMarker | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [atmDisponibilities, setAtmDisponibilities] = useState<
+    Record<number, boolean>
+  >({});
 
   const getCurrentLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -90,11 +93,15 @@ export default function Home() {
     setIsLoading(true);
     try {
       const query = `[out:json];
-        node["amenity"="atm"](${region.latitude - 0.1},${region.longitude - 0.1},${region.latitude + 0.1},${region.longitude + 0.1});
+        node["amenity"="atm"](${region.latitude - 0.1},${
+        region.longitude - 0.1
+      },${region.latitude + 0.1},${region.longitude + 0.1});
         out;`;
 
       const response = await fetch(
-        `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
+        `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(
+          query
+        )}`
       );
 
       const data = await response.json();
@@ -161,6 +168,13 @@ export default function Home() {
     if (best) {
       setSelectedATM(best);
       setShowModal(true);
+
+      // Initialise disponibilité si elle n'existe pas encore
+      setAtmDisponibilities((prev) => ({
+        ...prev,
+        [best.id]: prev[best.id] ?? true,
+      }));
+
       getRouteToATM(best.coordinate);
     }
   };
@@ -207,11 +221,22 @@ export default function Home() {
   );
 
   return (
-    <View style={[{ ...(styles.container as object), backgroundColor: isDark ? "#000" : "#fff" }]}>
+
+    <View
+      style={[styles.container, { backgroundColor: isDark ? "#000" : "#fff" }]}
+    >
       {region && (
-        <MapView ref={mapRef} style={styles.map} region={region} showsUserLocation>
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          region={region}
+          showsUserLocation
+        >
           <Marker
-            coordinate={{ latitude: region.latitude, longitude: region.longitude }}
+            coordinate={{
+              latitude: region.latitude,
+              longitude: region.longitude,
+            }}
             title="Votre position"
             pinColor="blue"
           />
@@ -225,13 +250,21 @@ export default function Home() {
               onPress={() => {
                 setSelectedATM(atm);
                 setShowModal(true);
+                setAtmDisponibilities((prev) => ({
+                  ...prev,
+                  [atm.id]: prev[atm.id] ?? true,
+                }));
                 getRouteToATM(atm.coordinate);
               }}
             />
           ))}
 
           {routeCoords.length > 0 && (
-            <Polyline coordinates={routeCoords} strokeWidth={4} strokeColor="#00f" />
+            <Polyline
+              coordinates={routeCoords}
+              strokeWidth={4}
+              strokeColor="#00f"
+            />
           )}
         </MapView>
       )}
@@ -242,7 +275,11 @@ export default function Home() {
           onPress={fetchAllATMs}
           disabled={isLoading}
         >
-          {isLoading ? <ActivityIndicator color="#fff" /> : <Ionicons name="cash" size={24} color="#fff" />}
+          {isLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Ionicons name="cash" size={24} color="#fff" />
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -291,20 +328,71 @@ export default function Home() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{selectedATM?.title}</Text>
-            {selectedATM?.raw?.name && <Text>Nom : {selectedATM.raw.name}</Text>}
-            {selectedATM?.raw?.operator && <Text>Opérateur : {selectedATM.raw.operator}</Text>}
-            {selectedATM?.raw?.brand && <Text>Marque : {selectedATM.raw.brand}</Text>}
-            {selectedATM?.raw?.network && <Text>Réseau : {selectedATM.raw.network}</Text>}
-            {selectedATM?.raw?.address && <Text>Adresse : {selectedATM.raw.address}</Text>}
-            {travelTime && <Text>Temps estimé : {travelTime} min</Text>}
-            {selectedATM?.distance !== undefined && (
-              <Text>Distance : {selectedATM.distance.toFixed(2)} km</Text>
+            <Text style={styles.modalText}>{selectedATM?.description}</Text>
+            {travelTime && (
+              <Text style={styles.modalText}>
+                Temps estimé : {travelTime} min
+              </Text>
             )}
+
+            <View style={styles.rowDisponibility}>
+              <Text
+                style={[
+                  styles.modalTextInline,
+                  {
+                    color: atmDisponibilities[selectedATM?.id]
+                      ? "green"
+                      : "red",
+                    fontWeight: "bold",
+                    marginRight: 10,
+                  },
+                ]}
+              >
+                Disponibilité :{" "}
+                {atmDisponibilities[selectedATM?.id]
+                  ? "Disponible"
+                  : "Indisponible"}
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.dispoToggleBtn,
+                  {
+                    backgroundColor: atmDisponibilities[selectedATM?.id]
+                      ? "#dc3545"
+                      : "#28a745",
+                  },
+                ]}
+                onPress={() =>
+                  setAtmDisponibilities((prev) => ({
+                    ...prev,
+                    [selectedATM?.id]: !prev[selectedATM?.id],
+                  }))
+                }
+              >
+                <Text style={styles.toggleText}>
+                  {atmDisponibilities[selectedATM?.id] ? "❌" : "✔️"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
-              style={styles.confirmBtn}
+              style={[styles.confirmBtn, { backgroundColor: "#007bff" }]}
               onPress={() => setShowModal(false)}
             >
-              <Text style={{ color: "white" }}>Démarrer l&apos;itinéraire</Text>
+
+              <Text style={styles.buttonText}>Démarrer l'itinéraire</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.confirmBtn, { backgroundColor: "#6c757d" }]}
+              onPress={() => {
+                setShowModal(false);
+                setRouteCoords([]);
+                setTravelTime(null);
+              }}
+            >
+              <Text style={styles.buttonText}>Annuler</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -356,6 +444,13 @@ const styles = StyleSheet.create<{
     alignItems: "center",
     elevation: 3,
   },
+  buttonText: {
+    fontSize: 14,
+    textAlign: "center",
+    flexWrap: "wrap",
+    color: "white",
+    fontWeight: "500",
+  },
   searchBar: {
     position: "absolute",
     top: 40,
@@ -374,11 +469,25 @@ const styles = StyleSheet.create<{
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    width: "80%",
+    width: "90%",
+    maxWidth: 400,
     backgroundColor: "white",
     borderRadius: 10,
     padding: 20,
     alignItems: "center",
+  },
+  modalText: {
+    fontSize: 14,
+    textAlign: "center",
+    flexWrap: "wrap",
+    marginBottom: 10,
+    width: "100%",
+    color: "#333",
+  },
+  modalTextInline: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 10,
   },
   modalTitle: {
     fontSize: 18,
@@ -386,10 +495,29 @@ const styles = StyleSheet.create<{
     marginBottom: 10,
   },
   confirmBtn: {
-    marginTop: 15,
-    backgroundColor: "#007bff",
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 5,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 10,
+    width: "100%",
+  },
+
+  rowDisponibility: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    flexWrap: "wrap",
+  },
+
+  dispoToggleBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+
+  toggleText: {
+    color: "white",
+    fontWeight: "bold",
   },
 });
