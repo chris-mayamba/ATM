@@ -1,20 +1,11 @@
 // app/(tabs)/home.tsx
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Location from "expo-location";
-import React, { useRef, useState, useEffect } from "react";
-import { ViewStyle, TextStyle, ImageStyle } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  Dimensions,
-  StyleSheet,
-  TouchableOpacity,
+  Alert, Modal, StyleSheet, Text, TextInput, TextStyle, TouchableOpacity,
   useColorScheme,
-  View,
-  ActivityIndicator,
-  Alert,
-  Text,
-  Modal,
-  TextInput,
-  ScrollView,
+  View, ViewStyle
 } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import { useSession } from "../../ctx";
@@ -89,6 +80,13 @@ export default function Home() {
   useEffect(() => {
     getCurrentLocation();
   }, []);
+
+  // Ajoute ce useEffect pour charger les ATM dès que la région est connue
+  useEffect(() => {
+    if (region) {
+      fetchAllATMs();
+    }
+  }, [region]);
 
   const fetchAllATMs = async () => {
     if (!region) return;
@@ -223,7 +221,6 @@ export default function Home() {
   );
 
   return (
-
     <View
       style={[styles.container, { backgroundColor: isDark ? "#000" : "#fff" }]}
     >
@@ -249,6 +246,7 @@ export default function Home() {
               coordinate={atm.coordinate}
               title={atm.title}
               description={atm.description}
+              image={atm.icon}
               onPress={() => {
                 setSelectedATM(atm);
                 setShowModal(true);
@@ -271,19 +269,13 @@ export default function Home() {
         </MapView>
       )}
 
-      <View style={styles.controls}>
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: "#007bff" }]}
-          onPress={fetchAllATMs}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Ionicons name="cash" size={24} color="#fff" />
-          )}
-        </TouchableOpacity>
-
+      {/* Pour positionner le bouton */}
+      <View style={{
+        position: "absolute",
+        bottom: 30,
+        right: 20,
+        zIndex: 10,
+      }}>
         <TouchableOpacity
           style={[styles.button, { backgroundColor: "#28a745" }]}
           onPress={getCurrentLocation}

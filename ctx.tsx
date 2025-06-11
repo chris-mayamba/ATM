@@ -8,7 +8,6 @@ client.setEndpoint('https://cloud.appwrite.io/v1').setProject('682c932f001076e9c
 const account = new Account(client);
 
 const SessionContext = createContext();
-
 // const SessionContext = createContext({
 //   user: null,
 //   login: async () => {},
