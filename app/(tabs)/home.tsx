@@ -3,7 +3,12 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Location from "expo-location";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Alert, Modal, StyleSheet, Text, TextInput, TextStyle, TouchableOpacity,
+  Alert,
+  Animated,
+  Image,
+  Modal, StyleSheet,
+  Switch,
+  Text, TextInput, TextStyle, TouchableOpacity,
   useColorScheme,
   View, ViewStyle
 } from "react-native";
@@ -54,6 +59,10 @@ export default function Home() {
     Record<number, boolean>
   >({});
   const [comments, setComments] = useState<Record<string, string>>({});
+
+  // Animation pour le modal
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(40)).current;
 
   const getCurrentLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -220,6 +229,26 @@ export default function Home() {
     atm.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  useEffect(() => {
+    if (showModal) {
+      // Animation d'apparition
+      fadeAnim.setValue(0);
+      translateYAnim.setValue(40);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateYAnim, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [showModal]);
+
   return (
     <View
       style={[styles.container, { backgroundColor: isDark ? "#000" : "#fff" }]}
@@ -318,58 +347,98 @@ export default function Home() {
         </View>
       )}
 
-      <Modal visible={showModal} transparent animationType="slide">
+      <Modal visible={showModal} transparent animationType="none">
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{selectedATM?.title}</Text>
-            <Text style={styles.modalText}>{selectedATM?.description}</Text>
-            {travelTime && (
-              <Text style={styles.modalText}>
-                Temps estimé : {travelTime} min
-              </Text>
+          <Animated.View
+            style={[
+              styles.modalContent,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: translateYAnim }],
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+                elevation: 8,
+              },
+            ]}
+          >
+            {/* Logo banque */}
+            {selectedATM?.icon && (
+              <View style={{ marginBottom: 10 }}>
+                <Image
+                  source={selectedATM.icon}
+                  style={{ width: 60, height: 60, borderRadius: 12 }}
+                  resizeMode="contain"
+                />
+              </View>
             )}
 
-            <View style={styles.rowDisponibility}>
-              <Text
-                style={[
-                  styles.modalTextInline,
-                  {
-                    color: atmDisponibilities[selectedATM?.id]
-                      ? "green"
-                      : "red",
-                    fontWeight: "bold",
-                    marginRight: 10,
-                  },
-                ]}
-              >
-                Etat :{" "}
-                {atmDisponibilities[selectedATM?.id]
-                  ? "Disponible"
-                  : "Indisponible"}
-              </Text>
+            <Text style={[styles.modalTitle, { color: "#007bff", marginBottom: 4 }]}>
+              {selectedATM?.title}
+            </Text>
 
-              <TouchableOpacity
-                style={[
-                  styles.dispoToggleBtn,
-                  {
-                    backgroundColor: atmDisponibilities[selectedATM?.id]
-                      ? "#dc3545"
-                      : "#28a745",
-                  },
-                ]}
-                onPress={() =>
+            {/* Adresse et distance */}
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <Ionicons name="location-outline" size={18} color="#888" style={{ marginRight: 4 }} />
+              <Text style={{ color: "#555", fontSize: 14, flex: 1 }}>
+                {selectedATM?.raw?.address || "Adresse inconnue"}
+              </Text>
+            </View>
+            {selectedATM?.distance !== undefined && (
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                <Ionicons name="walk-outline" size={18} color="#888" style={{ marginRight: 4 }} />
+                <Text style={{ color: "#555", fontSize: 14 }}>
+                  {selectedATM.distance.toFixed(2)} km
+                </Text>
+              </View>
+            )}
+
+            {/* Séparateur */}
+            <View style={{ height: 1, backgroundColor: "#eee", width: "100%", marginVertical: 10 }} />
+
+            {/* Disponibilité */}
+            <View style={styles.rowDisponibility}>
+              <Ionicons
+                name={atmDisponibilities[selectedATM?.id] ? "checkmark-circle" : "close-circle"}
+                size={20}
+                color={atmDisponibilities[selectedATM?.id] ? "#28a745" : "#dc3545"}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={[
+                styles.modalTextInline,
+                {
+                  color: atmDisponibilities[selectedATM?.id] ? "#28a745" : "#dc3545",
+                  fontWeight: "bold",
+                  marginRight: 10,
+                },
+              ]}>
+                {atmDisponibilities[selectedATM?.id] ? "Disponible" : "Indisponible"}
+              </Text>
+              <Switch
+                value={!!atmDisponibilities[selectedATM?.id]}
+                onValueChange={() =>
                   setAtmDisponibilities((prev) => ({
                     ...prev,
                     [selectedATM?.id]: !prev[selectedATM?.id],
                   }))
                 }
-              >
-                <Text style={styles.toggleText}>
-                  {atmDisponibilities[selectedATM?.id] ? "❌" : "✔️"}
-                </Text>
-              </TouchableOpacity>
+                trackColor={{ false: "#dc3545", true: "#28a745" }}
+                thumbColor="#fff"
+              />
             </View>
 
+            {/* Temps estimé */}
+            {travelTime && (
+              <Text style={[styles.modalText, { color: "#007bff", fontWeight: "bold" }]}>
+                Temps estimé : {travelTime} min
+              </Text>
+            )}
+
+            {/* Séparateur */}
+            <View style={{ height: 1, backgroundColor: "#eee", width: "100%", marginVertical: 10 }} />
+
+            {/* Commentaire */}
             <View style={styles.commentInputContainer}>
               <TextInput
                 style={styles.commentInput}
@@ -381,6 +450,7 @@ export default function Home() {
                     [`${selectedATM?.id}_${user?.id}`]: text,
                   }))
                 }
+                placeholderTextColor="#aaa"
               />
               <TouchableOpacity
                 style={styles.commentSendButton}
@@ -404,16 +474,22 @@ export default function Home() {
               </TouchableOpacity>
             </View>
 
+            {/* Boutons actions */}
             <TouchableOpacity
-              style={[styles.confirmBtn, { backgroundColor: "#007bff" }]}
+              style={[
+                styles.confirmBtn,
+                { backgroundColor: "#007bff", marginTop: 16, marginBottom: 6, borderRadius: 20 },
+              ]}
               onPress={() => setShowModal(false)}
             >
-
-              <Text style={styles.buttonText}>Démarrer l'itinéraire</Text>
+              <Text style={[styles.buttonText, { fontWeight: "bold" }]}>Démarrer l'itinéraire</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.confirmBtn, { backgroundColor: "#6c757d" }]}
+              style={[
+                styles.confirmBtn,
+                { backgroundColor: "#6c757d", borderRadius: 20 },
+              ]}
               onPress={() => {
                 setShowModal(false);
                 setRouteCoords([]);
@@ -422,7 +498,7 @@ export default function Home() {
             >
               <Text style={styles.buttonText}>Annuler</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </View>
@@ -455,6 +531,7 @@ const styles = StyleSheet.create<{
   modalContent: ViewStyle;
   modalTitle: TextStyle;
   confirmBtn: ViewStyle;
+  card: ViewStyle;
 }>({
   container: { flex: 1 },
   map: { width: "100%", height: "100%" },
@@ -529,6 +606,19 @@ const styles = StyleSheet.create<{
     alignItems: "center",
     marginTop: 10,
     width: "100%",
+  },
+  card: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+    alignItems: "flex-start",
   },
 
   rowDisponibility: {
