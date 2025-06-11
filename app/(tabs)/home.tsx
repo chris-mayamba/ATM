@@ -13,6 +13,7 @@ import {
   Text,
   Modal,
   TextInput,
+  ScrollView,
 } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import { useSession } from "../../ctx";
@@ -24,16 +25,37 @@ const ATM_ICONS: Record<string, any> = {
 };
 
 export default function Home() {
-  const mapRef = useRef(null);
-  const { user } = useSession();
+  const mapRef = useRef<MapView>(null);
+  useSession();
   const isDark = useColorScheme() === "dark";
 
-  const [region, setRegion] = useState(null);
-  const [atmMarkers, setAtmMarkers] = useState([]);
+  const [region, setRegion] = useState<{
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+  } | null>(null);
+  type ATMMarker = {
+    distance: number;
+    id: any;
+    coordinate: { latitude: number; longitude: number };
+    title: string;
+    description: string;
+    icon: any;
+    raw?: {
+      name?: string;
+      operator?: string;
+      brand?: string;
+      network?: string;
+      address?: string;
+      [key: string]: any;
+    };
+  };
+  const [atmMarkers, setAtmMarkers] = useState<ATMMarker[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [routeCoords, setRouteCoords] = useState([]);
-  const [travelTime, setTravelTime] = useState(null);
-  const [selectedATM, setSelectedATM] = useState(null);
+  const [travelTime, setTravelTime] = useState<number | null>(null);
+  const [selectedATM, setSelectedATM] = useState<ATMMarker | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [atmDisponibilities, setAtmDisponibilities] = useState<
@@ -84,14 +106,42 @@ export default function Home() {
 
       const data = await response.json();
 
-      const markers = data.elements.map((atm) => {
-        const operator = atm.tags?.operator || "Inconnue";
+      const markers = data.elements.map(function (atm: { tags: {
+        address: any;
+        brand: any;
+        network: any; operator: string; name: any; 
+}; lat: number; lon: number; id: any; }) {
+        const operator =
+          atm.tags?.operator ||
+          atm.tags?.brand ||
+          atm.tags?.network ||
+          atm.tags?.name ||
+          "Distributeur inconnu";
+
+        // Calculate distance from current region to ATM
+        const distance = region
+          ? getDistanceFromLatLonInKm(
+              region.latitude,
+              region.longitude,
+              atm.lat,
+              atm.lon
+            )
+          : undefined;
+
         return {
           id: atm.id,
           coordinate: { latitude: atm.lat, longitude: atm.lon },
-          title: operator,
-          description: atm.tags?.name || "Distributeur automatique",
+          title: operator, // Le nom de la banque ou du réseau
+          description: [
+            atm.tags?.name,
+            atm.tags?.address,
+            atm.tags?.operator,
+            atm.tags?.brand,
+            atm.tags?.network
+          ].filter(Boolean).join(" | "),
           icon: ATM_ICONS[operator] || ATM_ICONS.Default,
+          distance,
+          raw: atm.tags // Ajoute toutes les infos brutes pour la modal
         };
       });
 
@@ -104,7 +154,7 @@ export default function Home() {
     }
   };
 
-  const chooseBestATM = async (markers) => {
+  const chooseBestATM = async (markers: any) => {
     if (!region) return;
     let best = null;
     let bestTime = Infinity;
@@ -129,7 +179,8 @@ export default function Home() {
     }
   };
 
-  const getTravelTime = async (atmCoord) => {
+  const getTravelTime = async (atmCoord: { longitude: any; latitude: any; }) => {
+    if (!region) return null;
     try {
       const res = await fetch(
         `https://router.project-osrm.org/route/v1/driving/${region.longitude},${region.latitude};${atmCoord.longitude},${atmCoord.latitude}?overview=false`
@@ -141,7 +192,7 @@ export default function Home() {
     }
   };
 
-  const getRouteToATM = async (atmCoord) => {
+  const getRouteToATM = async (atmCoord: { longitude: any; latitude: any; }) => {
     if (!region) return;
 
     try {
@@ -150,10 +201,12 @@ export default function Home() {
       );
 
       const data = await response.json();
-      const coords = data.routes[0].geometry.coordinates.map(([lon, lat]) => ({
-        latitude: lat,
-        longitude: lon,
-      }));
+      const coords = data.routes[0].geometry.coordinates.map(
+        ([lon, lat]: [number, number]) => ({
+          latitude: lat,
+          longitude: lon,
+        })
+      );
       const duration = data.routes[0].duration;
 
       setRouteCoords(coords);
@@ -168,6 +221,7 @@ export default function Home() {
   );
 
   return (
+
     <View
       style={[styles.container, { backgroundColor: isDark ? "#000" : "#fff" }]}
     >
@@ -243,6 +297,33 @@ export default function Home() {
         value={searchQuery}
       />
 
+      {filteredATMs.length > 0 && (
+        <View style={{ maxHeight: 200, margin: 10, backgroundColor: "#fff", borderRadius: 8, elevation: 2 }}>
+          <Text style={{ fontWeight: "bold", fontSize: 16, margin: 10 }}>Liste des distributeurs</Text>
+          {filteredATMs
+            .sort((a, b) => (a.distance ?? 9999) - (b.distance ?? 9999))
+            .map((atm) => (
+              <TouchableOpacity
+                key={atm.id}
+                style={{ padding: 10, borderBottomWidth: 1, borderColor: "#eee" }}
+                onPress={() => {
+                  setSelectedATM(atm);
+                  setShowModal(true);
+                  getRouteToATM(atm.coordinate);
+                }}
+              >
+                <Text style={{ fontWeight: "bold" }}>{atm.title}</Text>
+                <Text>{atm.description}</Text>
+                {atm.distance !== undefined && (
+                  <Text style={{ color: "#888" }}>
+                    {atm.distance.toFixed(2)} km
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
+        </View>
+      )}
+
       <Modal visible={showModal} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -299,6 +380,7 @@ export default function Home() {
               style={[styles.confirmBtn, { backgroundColor: "#007bff" }]}
               onPress={() => setShowModal(false)}
             >
+
               <Text style={styles.buttonText}>Démarrer l'itinéraire</Text>
             </TouchableOpacity>
 
@@ -319,7 +401,33 @@ export default function Home() {
   );
 }
 
-const styles = StyleSheet.create({
+function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+import { ViewStyle, TextStyle, ImageStyle } from "react-native";
+
+const styles = StyleSheet.create<{
+  container: ViewStyle;
+  map: ViewStyle;
+  controls: ViewStyle;
+  button: ViewStyle;
+  searchBar: TextStyle;
+  modalContainer: ViewStyle;
+  modalContent: ViewStyle;
+  modalTitle: TextStyle;
+  confirmBtn: ViewStyle;
+}>({
   container: { flex: 1 },
   map: { width: "100%", height: "100%" },
   controls: {
