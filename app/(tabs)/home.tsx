@@ -267,7 +267,7 @@ export default function Home() {
                   },
                 ]}
               >
-                Disponibilité :{" "}
+                Etat :{" "}
                 {atmDisponibilities[selectedATM?.id]
                   ? "Disponible"
                   : "Indisponible"}
