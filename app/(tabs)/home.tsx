@@ -2,6 +2,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Location from "expo-location";
 import React, { useRef, useState, useEffect } from "react";
+import { ViewStyle, TextStyle, ImageStyle } from "react-native";
 import {
   Dimensions,
   StyleSheet,
@@ -26,7 +27,7 @@ const ATM_ICONS: Record<string, any> = {
 
 export default function Home() {
   const mapRef = useRef<MapView>(null);
-  useSession();
+  const {user} = useSession();
   const isDark = useColorScheme() === "dark";
 
   const [region, setRegion] = useState<{
@@ -450,7 +451,7 @@ function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon
   return R * c;
 }
 
-import { ViewStyle, TextStyle, ImageStyle } from "react-native";
+
 
 const styles = StyleSheet.create<{
   container: ViewStyle;
