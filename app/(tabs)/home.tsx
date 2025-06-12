@@ -1,5 +1,3 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
-import * as Location from "expo-location";
 import React, { useRef, useState, useEffect } from "react";
 import {
   Dimensions,
@@ -15,23 +13,36 @@ import {
   ScrollView,
   Animated,
   StatusBar,
+  Platform,
 } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import * as Location from "expo-location";
 import { useSession } from "../../ctx";
 import { LinearGradient } from 'expo-linear-gradient';
+import { Home, Search, MapPin, Navigation, RefreshCw, User, Star, Clock, Car, CheckCircle, X, Send, Filter } from 'lucide-react-native';
+
+// Platform-specific imports
+let MapView: any = null;
+let Marker: any = null;
+let Polyline: any = null;
+let PROVIDER_GOOGLE: any = null;
+let WebMap: any = null;
+
+if (Platform.OS !== 'web') {
+  const Maps = require('react-native-maps');
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  Polyline = Maps.Polyline;
+  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+} else {
+  WebMap = require('../../components/WebMap').default;
+}
 
 const { width, height } = Dimensions.get('window');
-
-const ATM_ICONS: Record<string, any> = {
-  Equity: require("../../assets/images/equity-icon.png"),
-  Rawbank: require("../../assets/images/rawbank-icon.jpeg"),
-  Default: require("../../assets/images/atm-icon.png"),
-};
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAq_iuJqvPLnoVKkxwlcibyGrSjQyvDzao";
 
 export default function Home() {
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
   const { user } = useSession();
   const isDark = useColorScheme() === "dark";
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -50,7 +61,6 @@ export default function Home() {
     coordinate: { latitude: number; longitude: number };
     title: string;
     description: string;
-    icon: any;
     rating?: number;
     isOpen?: boolean;
     raw?: {
@@ -111,7 +121,9 @@ export default function Home() {
       };
 
       setRegion(newRegion);
-      mapRef.current?.animateToRegion(newRegion, 1000);
+      if (mapRef.current?.animateToRegion) {
+        mapRef.current.animateToRegion(newRegion, 1000);
+      }
     } catch (error) {
       Alert.alert("Erreur", "Impossible d'obtenir votre localisation.");
     }
@@ -151,7 +163,6 @@ export default function Home() {
             },
             title: place.name || "Distributeur ATM",
             description: place.vicinity || "Adresse non disponible",
-            icon: ATM_ICONS.Default,
             distance,
             rating: place.rating || 0,
             isOpen: place.opening_hours?.open_now ?? true,
@@ -232,11 +243,13 @@ export default function Home() {
     getRouteToATM(atm.coordinate);
     
     // Center map on selected ATM
-    mapRef.current?.animateToRegion({
-      ...atm.coordinate,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-    }, 1000);
+    if (mapRef.current?.animateToRegion) {
+      mapRef.current.animateToRegion({
+        ...atm.coordinate,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 1000);
+    }
   };
 
   const theme = {
@@ -251,6 +264,63 @@ export default function Home() {
     success: '#10b981',
     warning: '#f59e0b',
     error: '#ef4444',
+  };
+
+  const renderMap = () => {
+    if (Platform.OS === 'web') {
+      return (
+        <WebMap
+          region={region}
+          atmMarkers={filteredATMs}
+          onMarkerPress={handleATMPress}
+          selectedATM={selectedATM}
+          routeCoords={routeCoords}
+          isDark={isDark}
+          mapRef={mapRef}
+        />
+      );
+    } else {
+      return (
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          region={region}
+          showsUserLocation
+          showsMyLocationButton={false}
+          provider={PROVIDER_GOOGLE}
+          customMapStyle={isDark ? darkMapStyle : []}
+        >
+          {filteredATMs.map((atm) => (
+            <Marker
+              key={atm.id}
+              coordinate={atm.coordinate}
+              title={atm.title}
+              description={atm.description}
+              onPress={() => handleATMPress(atm)}
+            >
+              <View style={[
+                styles.customMarker,
+                {
+                  backgroundColor: atm.isOpen ? theme.success : theme.warning,
+                  borderColor: selectedATM?.id === atm.id ? theme.primary : 'transparent',
+                }
+              ]}>
+                <MapPin size={20} color="#ffffff" />
+              </View>
+            </Marker>
+          ))}
+
+          {routeCoords.length > 0 && (
+            <Polyline
+              coordinates={routeCoords}
+              strokeWidth={4}
+              strokeColor={theme.primary}
+              lineDashPattern={[5, 5]}
+            />
+          )}
+        </MapView>
+      );
+    }
   };
 
   return (
@@ -299,7 +369,7 @@ export default function Home() {
         ]}
       >
         <View style={[styles.searchBar, { backgroundColor: theme.background }]}>
-          <Ionicons name="search" size={20} color={theme.textSecondary} />
+          <Search size={20} color={theme.textSecondary} />
           <TextInput
             style={[styles.searchInput, { color: theme.text }]}
             placeholder="Rechercher une banque..."
@@ -311,8 +381,7 @@ export default function Home() {
             style={[styles.filterButton, { backgroundColor: showFilters ? theme.primary : 'transparent' }]}
             onPress={() => setShowFilters(!showFilters)}
           >
-            <Ionicons 
-              name="options" 
+            <Filter 
               size={20} 
               color={showFilters ? '#ffffff' : theme.textSecondary} 
             />
@@ -323,9 +392,9 @@ export default function Home() {
         {showFilters && (
           <Animated.View style={[styles.filtersContainer, { backgroundColor: theme.surface }]}>
             {[
-              { key: 'all', label: 'Tous', icon: 'apps' },
-              { key: 'open', label: 'Ouverts', icon: 'time' },
-              { key: 'nearby', label: 'Proches', icon: 'location' },
+              { key: 'all', label: 'Tous', icon: Home },
+              { key: 'open', label: 'Ouverts', icon: Clock },
+              { key: 'nearby', label: 'Proches', icon: MapPin },
             ].map((filter) => (
               <TouchableOpacity
                 key={filter.key}
@@ -337,8 +406,7 @@ export default function Home() {
                 ]}
                 onPress={() => setSelectedFilter(filter.key as any)}
               >
-                <Ionicons
-                  name={filter.icon as any}
+                <filter.icon
                   size={16}
                   color={selectedFilter === filter.key ? '#ffffff' : theme.textSecondary}
                 />
@@ -360,46 +428,7 @@ export default function Home() {
 
       {/* Map */}
       <Animated.View style={[styles.mapContainer, { opacity: fadeAnim }]}>
-        {region && (
-          <MapView
-            ref={mapRef}
-            style={styles.map}
-            region={region}
-            showsUserLocation
-            showsMyLocationButton={false}
-            provider={PROVIDER_GOOGLE}
-            customMapStyle={isDark ? darkMapStyle : []}
-          >
-            {filteredATMs.map((atm) => (
-              <Marker
-                key={atm.id}
-                coordinate={atm.coordinate}
-                title={atm.title}
-                description={atm.description}
-                onPress={() => handleATMPress(atm)}
-              >
-                <View style={[
-                  styles.customMarker,
-                  {
-                    backgroundColor: atm.isOpen ? theme.success : theme.warning,
-                    borderColor: selectedATM?.id === atm.id ? theme.primary : 'transparent',
-                  }
-                ]}>
-                  <Ionicons name="card" size={20} color="#ffffff" />
-                </View>
-              </Marker>
-            ))}
-
-            {routeCoords.length > 0 && (
-              <Polyline
-                coordinates={routeCoords}
-                strokeWidth={4}
-                strokeColor={theme.primary}
-                lineDashPattern={[5, 5]}
-              />
-            )}
-          </MapView>
-        )}
+        {region && renderMap()}
       </Animated.View>
 
       {/* Floating Action Buttons */}
@@ -408,7 +437,7 @@ export default function Home() {
           style={[styles.fab, styles.fabSecondary, { backgroundColor: theme.surface }]}
           onPress={getCurrentLocation}
         >
-          <Ionicons name="locate" size={24} color={theme.primary} />
+          <Navigation size={24} color={theme.primary} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -419,7 +448,7 @@ export default function Home() {
           {isLoading ? (
             <ActivityIndicator color="#ffffff" size="small" />
           ) : (
-            <Ionicons name="refresh" size={24} color="#ffffff" />
+            <RefreshCw size={24} color="#ffffff" />
           )}
         </TouchableOpacity>
       </Animated.View>
@@ -476,7 +505,7 @@ export default function Home() {
                   
                   <View style={styles.atmCardFooter}>
                     <View style={styles.atmCardDistance}>
-                      <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
+                      <MapPin size={14} color={theme.textSecondary} />
                       <Text style={[styles.atmCardDistanceText, { color: theme.textSecondary }]}>
                         {atm.distance.toFixed(1)} km
                       </Text>
@@ -484,7 +513,7 @@ export default function Home() {
                     
                     {atm.rating > 0 && (
                       <View style={styles.atmCardRating}>
-                        <Ionicons name="star" size={14} color={theme.accent} />
+                        <Star size={14} color={theme.accent} />
                         <Text style={[styles.atmCardRatingText, { color: theme.textSecondary }]}>
                           {atm.rating.toFixed(1)}
                         </Text>
@@ -523,7 +552,7 @@ export default function Home() {
                   setTravelTime(null);
                 }}
               >
-                <Ionicons name="close" size={20} color={theme.text} />
+                <X size={20} color={theme.text} />
               </TouchableOpacity>
             </View>
 
@@ -532,11 +561,11 @@ export default function Home() {
               <View style={styles.modalSection}>
                 <View style={styles.modalInfoGrid}>
                   <View style={[styles.modalInfoCard, { backgroundColor: theme.background }]}>
-                    <Ionicons 
-                      name={selectedATM?.isOpen ? "checkmark-circle" : "time"} 
-                      size={24} 
-                      color={selectedATM?.isOpen ? theme.success : theme.warning} 
-                    />
+                    {selectedATM?.isOpen ? (
+                      <CheckCircle size={24} color={theme.success} />
+                    ) : (
+                      <Clock size={24} color={theme.warning} />
+                    )}
                     <Text style={[styles.modalInfoLabel, { color: theme.textSecondary }]}>
                       Statut
                     </Text>
@@ -546,7 +575,7 @@ export default function Home() {
                   </View>
 
                   <View style={[styles.modalInfoCard, { backgroundColor: theme.background }]}>
-                    <Ionicons name="location" size={24} color={theme.primary} />
+                    <MapPin size={24} color={theme.primary} />
                     <Text style={[styles.modalInfoLabel, { color: theme.textSecondary }]}>
                       Distance
                     </Text>
@@ -557,7 +586,7 @@ export default function Home() {
 
                   {travelTime && (
                     <View style={[styles.modalInfoCard, { backgroundColor: theme.background }]}>
-                      <Ionicons name="car" size={24} color={theme.accent} />
+                      <Car size={24} color={theme.accent} />
                       <Text style={[styles.modalInfoLabel, { color: theme.textSecondary }]}>
                         Temps
                       </Text>
@@ -599,11 +628,11 @@ export default function Home() {
                       }))
                     }
                   >
-                    <Ionicons 
-                      name={atmDisponibilities[selectedATM?.id] ? "checkmark" : "close"} 
-                      size={20} 
-                      color="#ffffff" 
-                    />
+                    {atmDisponibilities[selectedATM?.id] ? (
+                      <CheckCircle size={20} color="#ffffff" />
+                    ) : (
+                      <X size={20} color="#ffffff" />
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -643,7 +672,7 @@ export default function Home() {
                       setComments(prev => ({ ...prev, [commentKey]: "" }));
                     }}
                   >
-                    <Ionicons name="send" size={18} color="#ffffff" />
+                    <Send size={18} color="#ffffff" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -677,7 +706,7 @@ export default function Home() {
                   );
                 }}
               >
-                <Ionicons name="navigate" size={18} color="#ffffff" />
+                <Navigation size={18} color="#ffffff" />
                 <Text style={[styles.modalActionText, { color: "#ffffff" }]}>
                   Naviguer
                 </Text>
