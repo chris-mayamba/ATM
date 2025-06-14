@@ -1,17 +1,21 @@
-import React, { createContext, useEffect, useState, useContext } from 'react';
-import { Client, Account, OAuthProvider } from 'appwrite';
-import { useRouter } from 'expo-router';
-import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
-import { Platform } from 'react-native';
 
-WebBrowser.maybeCompleteAuthSession();
+// File: ctx.js
+import { Account, Client } from 'appwrite';
+import { useRouter } from 'expo-router';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 const client = new Client();
 client.setEndpoint('https://cloud.appwrite.io/v1').setProject('682c932f001076e9cc68');
 const account = new Account(client);
 
 const SessionContext = createContext();
+// const SessionContext = createContext({
+//   user: null,
+//   login: async () => {},
+//   logout: async () => {},
+//   register: async () => {},
+//   loading: true,
+// });
 
 export const SessionProvider = ({ children }) => {
   const [user, setUser] = useState(null);

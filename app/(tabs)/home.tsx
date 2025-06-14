@@ -1,20 +1,18 @@
-import React, { useRef, useState, useEffect } from "react";
+
+// app/(tabs)/home.tsx
+import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Location from "expo-location";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  Dimensions,
-  StyleSheet,
-  TouchableOpacity,
-  useColorScheme,
-  View,
-  ActivityIndicator,
   Alert,
-  Text,
-  Modal,
-  TextInput,
-  ScrollView,
+
   Animated,
-  StatusBar,
-  Platform,
   Image,
+  Modal, StyleSheet,
+  Switch,
+  Text, TextInput, TextStyle, TouchableOpacity,
+  useColorScheme,
+  View, ViewStyle
 } from "react-native";
 import * as Location from "expo-location";
 import { useSession } from "../../ctx";
@@ -58,8 +56,10 @@ if (Platform.OS !== 'web') {
 const { width, height } = Dimensions.get('window');
 
 export default function Home() {
-  const mapRef = useRef<any>(null);
-  const { user } = useSession();
+
+  const mapRef = useRef<MapView>(null);
+  const {user} = useSession();
+
   const isDark = useColorScheme() === "dark";
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-100)).current;
@@ -113,6 +113,10 @@ export default function Home() {
     ]).start();
   }, []);
 
+  // Animation pour le modal
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(40)).current;
+
   const getCurrentLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -155,7 +159,14 @@ export default function Home() {
     getCurrentLocation();
   }, []);
 
-  const loadATMsFromData = async () => {
+  // Ajoute ce useEffect pour charger les ATM dès que la région est connue
+  useEffect(() => {
+    if (region) {
+      fetchAllATMs();
+    }
+  }, [region]);
+
+  const fetchAllATMs = async () => {
     if (!region) return;
     setIsLoading(true);
     
@@ -251,54 +262,32 @@ export default function Home() {
     return matchesSearch && matchesFilter;
   });
 
-  const handleATMPress = (atm: ATMMarker) => {
-    setSelectedATM(atm);
-    setShowModal(true);
-    setAtmDisponibilities(prev => ({
-      ...prev,
-      [atm.id]: prev[atm.id] ?? atm.isOpen,
-    }));
-    getRouteToATM(atm.coordinate);
-    
-    // Center map on selected ATM
-    if (mapRef.current?.animateToRegion) {
-      mapRef.current.animateToRegion({
-        ...atm.coordinate,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }, 1000);
+
+  useEffect(() => {
+    if (showModal) {
+      // Animation d'apparition
+      fadeAnim.setValue(0);
+      translateYAnim.setValue(40);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateYAnim, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
-  };
+  }, [showModal]);
 
-  const theme = {
-    background: isDark ? '#0a0a0a' : '#f8fafc',
-    surface: isDark ? '#1a1a1a' : '#ffffff',
-    primary: '#3b82f6',
-    secondary: '#10b981',
-    accent: '#f59e0b',
-    text: isDark ? '#f1f5f9' : '#1e293b',
-    textSecondary: isDark ? '#94a3b8' : '#64748b',
-    border: isDark ? '#374151' : '#e2e8f0',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-  };
-
-  const renderMap = () => {
-    if (Platform.OS === 'web') {
-      return (
-        <WebMap
-          region={region}
-          atmMarkers={filteredATMs}
-          onMarkerPress={handleATMPress}
-          selectedATM={selectedATM}
-          routeCoords={routeCoords}
-          isDark={isDark}
-          mapRef={mapRef}
-        />
-      );
-    } else {
-      return (
+  return (
+    <View
+      style={[styles.container, { backgroundColor: isDark ? "#000" : "#fff" }]}
+    >
+      {region && (
         <MapView
           ref={mapRef}
           style={styles.map}
@@ -312,20 +301,20 @@ export default function Home() {
             <Marker
               key={atm.id}
               coordinate={atm.coordinate}
-              title={atm.name}
-              description={atm.address}
-              onPress={() => handleATMPress(atm)}
-            >
-              <View style={[
-                styles.customMarker,
-                {
-                  backgroundColor: bankColors[atm.bank] || theme.primary,
-                  borderColor: selectedATM?.id === atm.id ? '#ffffff' : 'transparent',
-                }
-              ]}>
-                <CreditCard size={16} color="#ffffff" />
-              </View>
-            </Marker>
+
+              title={atm.title}
+              description={atm.description}
+              image={atm.icon}
+              onPress={() => {
+                setSelectedATM(atm);
+                setShowModal(true);
+                setAtmDisponibilities((prev) => ({
+                  ...prev,
+                  [atm.id]: prev[atm.id] ?? true,
+                }));
+                getRouteToATM(atm.coordinate);
+              }}
+            />
           ))}
 
           {routeCoords.length > 0 && (
@@ -343,189 +332,17 @@ export default function Home() {
 
   const uniqueBanks = [...new Set(atmMarkers.map(atm => atm.bank))];
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-      
-      {/* Header */}
-      <Animated.View 
-        style={[
-          styles.header, 
-          { 
-            backgroundColor: theme.surface,
-            transform: [{ translateY: slideAnim }],
-            opacity: fadeAnim,
-          }
-        ]}
-      >
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={[styles.headerTitle, { color: theme.text }]}>
-              Bonjour, {user?.name?.split(' ')[0] || 'Utilisateur'}
-            </Text>
-            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
-              Distributeurs à Lubumbashi
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.profileButton, { backgroundColor: theme.primary }]}
-            onPress={() => {}}
-          >
-            <Text style={styles.profileButtonText}>
-              {user?.name?.charAt(0).toUpperCase() || '?'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
 
-      {/* Search Bar */}
-      <Animated.View 
-        style={[
-          styles.searchContainer,
-          { 
-            backgroundColor: theme.surface,
-            opacity: fadeAnim,
-          }
-        ]}
-      >
-        <View style={[styles.searchBar, { backgroundColor: theme.background }]}>
-          <Search size={20} color={theme.textSecondary} />
-          <TextInput
-            style={[styles.searchInput, { color: theme.text }]}
-            placeholder="Rechercher une banque ou ATM..."
-            placeholderTextColor={theme.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          <TouchableOpacity
-            style={[styles.filterButton, { backgroundColor: showFilters ? theme.primary : 'transparent' }]}
-            onPress={() => setShowFilters(!showFilters)}
-          >
-            <Filter 
-              size={20} 
-              color={showFilters ? '#ffffff' : theme.textSecondary} 
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Filters */}
-        {showFilters && (
-          <Animated.View style={[styles.filtersContainer, { backgroundColor: theme.surface }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {[
-                { key: 'all', label: 'Tous', icon: Home },
-                { key: 'open', label: 'Ouverts', icon: Clock },
-                { key: 'nearby', label: 'Proches', icon: MapPin },
-                { key: 'bank', label: 'Par banque', icon: Building2 },
-              ].map((filter) => (
-                <TouchableOpacity
-                  key={filter.key}
-                  style={[
-                    styles.filterChip,
-                    {
-                      backgroundColor: selectedFilter === filter.key ? theme.primary : theme.background,
-                    }
-                  ]}
-                  onPress={() => setSelectedFilter(filter.key as any)}
-                >
-                  <filter.icon
-                    size={16}
-                    color={selectedFilter === filter.key ? '#ffffff' : theme.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      {
-                        color: selectedFilter === filter.key ? '#ffffff' : theme.text,
-                      }
-                    ]}
-                  >
-                    {filter.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            
-            {selectedFilter === 'bank' && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bankFilters}>
-                <TouchableOpacity
-                  style={[
-                    styles.bankChip,
-                    {
-                      backgroundColor: selectedBank === 'all' ? theme.secondary : theme.background,
-                    }
-                  ]}
-                  onPress={() => setSelectedBank('all')}
-                >
-                  <Text style={[
-                    styles.bankChipText,
-                    { color: selectedBank === 'all' ? '#ffffff' : theme.text }
-                  ]}>
-                    Toutes
-                  </Text>
-                </TouchableOpacity>
-                {uniqueBanks.map((bank) => (
-                  <TouchableOpacity
-                    key={bank}
-                    style={[
-                      styles.bankChip,
-                      {
-                        backgroundColor: selectedBank === bank ? bankColors[bank] : theme.background,
-                      }
-                    ]}
-                    onPress={() => setSelectedBank(bank)}
-                  >
-                    <Text style={[
-                      styles.bankChipText,
-                      { color: selectedBank === bank ? '#ffffff' : theme.text }
-                    ]}>
-                      {bank}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-          </Animated.View>
-        )}
-      </Animated.View>
-
-      {/* Map */}
-      <Animated.View style={[styles.mapContainer, { opacity: fadeAnim }]}>
-        {region && renderMap()}
-      </Animated.View>
-
-      {/* Floating Action Buttons */}
-      <Animated.View style={[styles.fabContainer, { opacity: fadeAnim }]}>
+      {/* Pour positionner le bouton */}
+      <View style={{
+        position: "absolute",
+        bottom: 30,
+        right: 20,
+        zIndex: 10,
+      }}>
         <TouchableOpacity
-          style={[styles.fab, styles.fabSecondary, { backgroundColor: theme.surface }]}
+          style={[styles.button, { backgroundColor: "#28a745" }]}
           onPress={getCurrentLocation}
-        >
-          <Navigation size={24} color={theme.primary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.fab, styles.fabPrimary, { backgroundColor: theme.primary }]}
-          onPress={loadATMsFromData}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#ffffff" size="small" />
-          ) : (
-            <RefreshCw size={24} color="#ffffff" />
-          )}
-        </TouchableOpacity>
-      </Animated.View>
-
-      {/* ATM List */}
-      {filteredATMs.length > 0 && (
-        <Animated.View 
-          style={[
-            styles.atmListContainer, 
-            { 
-              backgroundColor: theme.surface,
-              opacity: fadeAnim,
-            }
-          ]}
         >
           <View style={styles.atmListHeader}>
             <Text style={[styles.atmListTitle, { color: theme.text }]}>
@@ -630,172 +447,111 @@ export default function Home() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalContent}>
-              {/* Status and Info */}
-              <View style={styles.modalSection}>
-                <View style={styles.modalInfoGrid}>
-                  <View style={[styles.modalInfoCard, { backgroundColor: theme.background }]}>
-                    {selectedATM?.isOpen ? (
-                      <CheckCircle size={24} color={theme.success} />
-                    ) : (
-                      <Clock size={24} color={theme.warning} />
-                    )}
-                    <Text style={[styles.modalInfoLabel, { color: theme.textSecondary }]}>
-                      Statut
-                    </Text>
-                    <Text style={[styles.modalInfoValue, { color: theme.text }]}>
-                      {selectedATM?.isOpen ? "Ouvert" : "Fermé"}
-                    </Text>
-                  </View>
-
-                  <View style={[styles.modalInfoCard, { backgroundColor: theme.background }]}>
-                    <MapPin size={24} color={theme.primary} />
-                    <Text style={[styles.modalInfoLabel, { color: theme.textSecondary }]}>
-                      Distance
-                    </Text>
-                    <Text style={[styles.modalInfoValue, { color: theme.text }]}>
-                      {selectedATM?.distance.toFixed(1)} km
-                    </Text>
-                  </View>
-
-                  {travelTime && (
-                    <View style={[styles.modalInfoCard, { backgroundColor: theme.background }]}>
-                      <Car size={24} color={theme.accent} />
-                      <Text style={[styles.modalInfoLabel, { color: theme.textSecondary }]}>
-                        Temps
-                      </Text>
-                      <Text style={[styles.modalInfoValue, { color: theme.text }]}>
-                        {travelTime} min
-                      </Text>
-                    </View>
-                  )}
-                </View>
+      <Modal visible={showModal} transparent animationType="none">
+        <View style={styles.modalContainer}>
+          <Animated.View
+            style={[
+              styles.modalContent,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: translateYAnim }],
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+                elevation: 8,
+              },
+            ]}
+          >
+            {/* Logo banque */}
+            {selectedATM?.icon && (
+              <View style={{ marginBottom: 10 }}>
+                <Image
+                  source={selectedATM.icon}
+                  style={{ width: 60, height: 60, borderRadius: 12 }}
+                  resizeMode="contain"
+                />
               </View>
+            )}
 
-              {/* Services */}
-              <View style={styles.modalSection}>
-                <Text style={[styles.modalSectionTitle, { color: theme.text }]}>
-                  Services disponibles
+            <Text style={[styles.modalTitle, { color: "#007bff", marginBottom: 4 }]}>
+              {selectedATM?.title}
+            </Text>
+
+            {/* Adresse et distance */}
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <Ionicons name="location-outline" size={18} color="#888" style={{ marginRight: 4 }} />
+              <Text style={{ color: "#555", fontSize: 14, flex: 1 }}>
+                {selectedATM?.raw?.address || "Adresse inconnue"}
+              </Text>
+            </View>
+            {selectedATM?.distance !== undefined && (
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                <Ionicons name="walk-outline" size={18} color="#888" style={{ marginRight: 4 }} />
+                <Text style={{ color: "#555", fontSize: 14 }}>
+                  {selectedATM.distance.toFixed(2)} km
                 </Text>
-                <View style={styles.servicesContainer}>
-                  {selectedATM?.services.map((service, index) => (
-                    <View key={index} style={[styles.serviceChip, { backgroundColor: theme.primary + '20' }]}>
-                      <Text style={[styles.serviceText, { color: theme.primary }]}>
-                        {service}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
               </View>
+            )}
 
-              {/* Opening Hours */}
-              <View style={styles.modalSection}>
-                <Text style={[styles.modalSectionTitle, { color: theme.text }]}>
-                  Horaires d'ouverture
-                </Text>
-                <View style={[styles.hoursContainer, { backgroundColor: theme.background }]}>
-                  <Clock size={20} color={theme.textSecondary} />
-                  <Text style={[styles.hoursText, { color: theme.text }]}>
-                    {selectedATM?.openingHours}
-                  </Text>
-                </View>
-              </View>
+            {/* Séparateur */}
+            <View style={{ height: 1, backgroundColor: "#eee", width: "100%", marginVertical: 10 }} />
 
-              {/* Availability Toggle */}
-              <View style={styles.modalSection}>
-                <Text style={[styles.modalSectionTitle, { color: theme.text }]}>
-                  Disponibilité
-                </Text>
-                <View style={[styles.availabilityContainer, { backgroundColor: theme.background }]}>
-                  <View style={styles.availabilityInfo}>
-                    <Text style={[styles.availabilityText, { color: theme.text }]}>
-                      Distributeur {atmDisponibilities[selectedATM?.id] ? "disponible" : "indisponible"}
-                    </Text>
-                    <Text style={[styles.availabilitySubtext, { color: theme.textSecondary }]}>
-                      Aidez la communauté en signalant l'état
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.availabilityToggle,
-                      {
-                        backgroundColor: atmDisponibilities[selectedATM?.id] 
-                          ? theme.success 
-                          : theme.error
-                      }
-                    ]}
-                    onPress={() =>
-                      setAtmDisponibilities(prev => ({
-                        ...prev,
-                        [selectedATM?.id]: !prev[selectedATM?.id],
-                      }))
-                    }
-                  >
-                    {atmDisponibilities[selectedATM?.id] ? (
-                      <CheckCircle size={20} color="#ffffff" />
-                    ) : (
-                      <X size={20} color="#ffffff" />
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
+            {/* Disponibilité */}
+            <View style={styles.rowDisponibility}>
+              <Ionicons
+                name={atmDisponibilities[selectedATM?.id] ? "checkmark-circle" : "close-circle"}
+                size={20}
+                color={atmDisponibilities[selectedATM?.id] ? "#28a745" : "#dc3545"}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={[
+                styles.modalTextInline,
+                {
+                  color: atmDisponibilities[selectedATM?.id] ? "#28a745" : "#dc3545",
+                  fontWeight: "bold",
+                  marginRight: 10,
+                },
+              ]}>
+                {atmDisponibilities[selectedATM?.id] ? "Disponible" : "Indisponible"}
+              </Text>
+              <Switch
+                value={!!atmDisponibilities[selectedATM?.id]}
+                onValueChange={() =>
+                  setAtmDisponibilities((prev) => ({
+                    ...prev,
+                    [selectedATM?.id]: !prev[selectedATM?.id],
+                  }))
+                }
+                trackColor={{ false: "#dc3545", true: "#28a745" }}
+                thumbColor="#fff"
+              />
+            </View>
 
-              {/* Comment Section */}
-              <View style={styles.modalSection}>
-                <Text style={[styles.modalSectionTitle, { color: theme.text }]}>
-                  Commentaire
-                </Text>
-                <View style={[styles.commentContainer, { backgroundColor: theme.background }]}>
-                  <TextInput
-                    style={[styles.commentInput, { color: theme.text }]}
-                    placeholder="Partagez votre expérience..."
-                    placeholderTextColor={theme.textSecondary}
-                    value={comments[`${selectedATM?.id}_${user?.id}`] || ""}
-                    onChangeText={(text) =>
-                      setComments(prev => ({
-                        ...prev,
-                        [`${selectedATM?.id}_${user?.id}`]: text,
-                      }))
-                    }
-                    multiline
-                    numberOfLines={3}
-                  />
-                  <TouchableOpacity
-                    style={[styles.commentSendButton, { backgroundColor: theme.primary }]}
-                    onPress={() => {
-                      const commentKey = `${selectedATM?.id}_${user?.id}`;
-                      const comment = comments[commentKey]?.trim();
+            {/* Temps estimé */}
+            {travelTime && (
+              <Text style={[styles.modalText, { color: "#007bff", fontWeight: "bold" }]}>
+                Temps estimé : {travelTime} min
+              </Text>
+            )}
 
-                      if (!comment) {
-                        Alert.alert("Commentaire vide", "Veuillez entrer un commentaire.");
-                        return;
-                      }
+            {/* Séparateur */}
+            <View style={{ height: 1, backgroundColor: "#eee", width: "100%", marginVertical: 10 }} />
 
-                      Alert.alert("Merci !", "Votre commentaire a été enregistré.");
-                      setComments(prev => ({ ...prev, [commentKey]: "" }));
-                    }}
-                  >
-                    <Send size={18} color="#ffffff" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </ScrollView>
-
-            {/* Action Buttons */}
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalActionButton, styles.modalActionSecondary, { backgroundColor: theme.background }]}
-                onPress={() => {
-                  setShowModal(false);
-                  setRouteCoords([]);
-                  setTravelTime(null);
-                }}
-              >
-                <Text style={[styles.modalActionText, { color: theme.text }]}>
-                  Fermer
-                </Text>
-              </TouchableOpacity>
-
+            {/* Commentaire */}
+            <View style={styles.commentInputContainer}>
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Laisser un commentaire..."
+                value={comments[`${selectedATM?.id}_${user?.id}`] || ""}
+                onChangeText={(text) =>
+                  setComments((prev) => ({
+                    ...prev,
+                    [`${selectedATM?.id}_${user?.id}`]: text,
+                  }))
+                }
+                placeholderTextColor="#aaa"
+              />
               <TouchableOpacity
                 style={[styles.modalActionButton, styles.modalActionPrimary, { backgroundColor: theme.primary }]}
                 onPress={() => {
@@ -815,6 +571,31 @@ export default function Home() {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Boutons actions */}
+            <TouchableOpacity
+              style={[
+                styles.confirmBtn,
+                { backgroundColor: "#007bff", marginTop: 16, marginBottom: 6, borderRadius: 20 },
+              ]}
+              onPress={() => setShowModal(false)}
+            >
+              <Text style={[styles.buttonText, { fontWeight: "bold" }]}>Démarrer l'itinéraire</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.confirmBtn,
+                { backgroundColor: "#6c757d", borderRadius: 20 },
+              ]}
+              onPress={() => {
+                setShowModal(false);
+                setRouteCoords([]);
+                setTravelTime(null);
+              }}
+            >
+              <Text style={styles.buttonText}>Annuler</Text>
+            </TouchableOpacity>
           </Animated.View>
         </View>
       </Modal>
@@ -835,51 +616,33 @@ function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
-
-const darkMapStyle = [
-  {
-    "elementType": "geometry",
-    "stylers": [{ "color": "#212121" }]
+const styles = StyleSheet.create<{
+  container: ViewStyle;
+  map: ViewStyle;
+  controls: ViewStyle;
+  button: ViewStyle;
+  searchBar: TextStyle;
+  modalContainer: ViewStyle;
+  modalContent: ViewStyle;
+  modalTitle: TextStyle;
+  confirmBtn: ViewStyle;
+  card: ViewStyle;
+}>({
+  container: { flex: 1 },
+  map: { width: "100%", height: "100%" },
+  controls: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    gap: 10,
   },
-  {
-    "elementType": "labels.icon",
-    "stylers": [{ "visibility": "off" }]
-  },
-  {
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#757575" }]
-  },
-  {
-    "elementType": "labels.text.stroke",
-    "stylers": [{ "color": "#212121" }]
-  }
-];
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingTop: StatusBar.currentHeight || 44,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontFamily: 'Poppins-Bold',
-    marginBottom: 4,
+  button: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 3,
   },
   headerSubtitle: {
     fontSize: 14,
@@ -1160,8 +923,25 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
-  modalSection: {
-    marginBottom: 24,
+  card: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+    alignItems: "flex-start",
+  },
+
+  rowDisponibility: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    flexWrap: "wrap",
   },
   modalSectionTitle: {
     fontSize: 16,
