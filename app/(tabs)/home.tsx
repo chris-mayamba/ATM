@@ -1,9 +1,11 @@
+
 // app/(tabs)/home.tsx
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Location from "expo-location";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
+
   Animated,
   Image,
   Modal, StyleSheet,
@@ -12,19 +14,55 @@ import {
   useColorScheme,
   View, ViewStyle
 } from "react-native";
-import MapView, { Marker, Polyline } from "react-native-maps";
+import * as Location from "expo-location";
 import { useSession } from "../../ctx";
+import { LinearGradient } from 'expo-linear-gradient';
+import { 
+  Home, 
+  Search, 
+  MapPin, 
+  Navigation, 
+  RefreshCw, 
+  User, 
+  Star, 
+  Clock, 
+  Car, 
+  CheckCircle, 
+  X, 
+  Send, 
+  Filter,
+  CreditCard,
+  Building2
+} from 'lucide-react-native';
+import { lubumbashiATMs, bankColors, getBankLogo } from '../../data/atmData';
 
-const ATM_ICONS: Record<string, any> = {
-  Equity: require("../../assets/images/equity-icon.png"),
-  Rawbank: require("../../assets/images/rawbank-icon.jpeg"),
-  Default: require("../../assets/images/atm-icon.png"),
-};
+// Platform-specific imports
+let MapView: any = null;
+let Marker: any = null;
+let Polyline: any = null;
+let PROVIDER_GOOGLE: any = null;
+let WebMap: any = null;
+
+if (Platform.OS !== 'web') {
+  const Maps = require('react-native-maps');
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  Polyline = Maps.Polyline;
+  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+} else {
+  WebMap = require('../../components/WebMap').default;
+}
+
+const { width, height } = Dimensions.get('window');
 
 export default function Home() {
+
   const mapRef = useRef<MapView>(null);
   const {user} = useSession();
+
   const isDark = useColorScheme() === "dark";
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-100)).current;
 
   const [region, setRegion] = useState<{
     latitude: number;
@@ -32,22 +70,21 @@ export default function Home() {
     latitudeDelta: number;
     longitudeDelta: number;
   } | null>(null);
+
   type ATMMarker = {
     distance: number;
-    id: any;
+    id: string;
     coordinate: { latitude: number; longitude: number };
-    title: string;
-    description: string;
-    icon: any;
-    raw?: {
-      name?: string;
-      operator?: string;
-      brand?: string;
-      network?: string;
-      address?: string;
-      [key: string]: any;
-    };
+    name: string;
+    bank: string;
+    address: string;
+    services: string[];
+    isOpen: boolean;
+    openingHours: string;
+    rating: number;
+    logo: string;
   };
+
   const [atmMarkers, setAtmMarkers] = useState<ATMMarker[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [routeCoords, setRouteCoords] = useState([]);
@@ -55,35 +92,67 @@ export default function Home() {
   const [selectedATM, setSelectedATM] = useState<ATMMarker | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [atmDisponibilities, setAtmDisponibilities] = useState<
-    Record<number, boolean>
-  >({});
+  const [atmDisponibilities, setAtmDisponibilities] = useState<Record<string, boolean>>({});
   const [comments, setComments] = useState<Record<string, string>>({});
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'open' | 'nearby' | 'bank'>('all');
+  const [selectedBank, setSelectedBank] = useState<string>('all');
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   // Animation pour le modal
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(40)).current;
 
   const getCurrentLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission refusée", "La localisation est requise.");
-      return;
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission refusée", "La localisation est requise pour trouver les distributeurs près de vous.");
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const newRegion = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      };
+
+      setRegion(newRegion);
+      if (mapRef.current?.animateToRegion) {
+        mapRef.current.animateToRegion(newRegion, 1000);
+      }
+    } catch (error) {
+      // Default to Lubumbashi center if location fails
+      const defaultRegion = {
+        latitude: -11.6647,
+        longitude: 27.4794,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      };
+      setRegion(defaultRegion);
+      if (mapRef.current?.animateToRegion) {
+        mapRef.current.animateToRegion(defaultRegion, 1000);
+      }
     }
-
-    const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
-
-    const newRegion = {
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-      latitudeDelta: 0.05,
-      longitudeDelta: 0.05,
-    };
-
-    setRegion(newRegion);
-    mapRef.current?.animateToRegion(newRegion, 1000);
   };
 
   useEffect(() => {
@@ -100,108 +169,52 @@ export default function Home() {
   const fetchAllATMs = async () => {
     if (!region) return;
     setIsLoading(true);
+    
     try {
-      const query = `[out:json];
-        node["amenity"="atm"](${region.latitude - 0.1},${
-        region.longitude - 0.1
-      },${region.latitude + 0.1},${region.longitude + 0.1});
-        out;`;
-
-      const response = await fetch(
-        `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(
-          query
-        )}`
-      );
-
-      const data = await response.json();
-
-      const markers = data.elements.map(function (atm: { tags: {
-        address: any;
-        brand: any;
-        network: any; operator: string; name: any; 
-}; lat: number; lon: number; id: any; }) {
-        const operator =
-          atm.tags?.operator ||
-          atm.tags?.brand ||
-          atm.tags?.network ||
-          atm.tags?.name ||
-          "Distributeur inconnu";
-
-        // Calculate distance from current region to ATM
-        const distance = region
-          ? getDistanceFromLatLonInKm(
-              region.latitude,
-              region.longitude,
-              atm.lat,
-              atm.lon
-            )
-          : undefined;
+      const markers = lubumbashiATMs.map((atm) => {
+        const distance = getDistanceFromLatLonInKm(
+          region.latitude,
+          region.longitude,
+          atm.coordinate.latitude,
+          atm.coordinate.longitude
+        );
 
         return {
-          id: atm.id,
-          coordinate: { latitude: atm.lat, longitude: atm.lon },
-          title: operator, // Le nom de la banque ou du réseau
-          description: [
-            atm.tags?.name,
-            atm.tags?.address,
-            atm.tags?.operator,
-            atm.tags?.brand,
-            atm.tags?.network
-          ].filter(Boolean).join(" | "),
-          icon: ATM_ICONS[operator] || ATM_ICONS.Default,
+          ...atm,
           distance,
-          raw: atm.tags // Ajoute toutes les infos brutes pour la modal
+          title: atm.name,
+          description: atm.address,
         };
       });
 
+      // Sort by distance
+      markers.sort((a, b) => a.distance - b.distance);
       setAtmMarkers(markers);
-      chooseBestATM(markers);
+      
+      // Auto-select the nearest ATM
+      if (markers.length > 0) {
+        const nearest = markers[0];
+        setSelectedATM(nearest);
+        setAtmDisponibilities(prev => ({
+          ...prev,
+          [nearest.id]: prev[nearest.id] ?? nearest.isOpen,
+        }));
+      }
     } catch (error) {
-      console.error("Erreur API:", error);
+      console.error("Erreur lors du chargement des ATMs:", error);
+      Alert.alert("Erreur", "Impossible de charger les données des distributeurs.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const chooseBestATM = async (markers: any) => {
-    if (!region) return;
-    let best = null;
-    let bestTime = Infinity;
-    for (const atm of markers) {
-      const duration = await getTravelTime(atm.coordinate);
-      if (duration && duration < bestTime) {
-        bestTime = duration;
-        best = atm;
-      }
+  useEffect(() => {
+    if (region) {
+      loadATMsFromData();
     }
-    if (best) {
-      setSelectedATM(best);
-      setShowModal(true);
+  }, [region]);
 
-      // Initialise disponibilité si elle n'existe pas encore
-      setAtmDisponibilities((prev) => ({
-        ...prev,
-        [best.id]: prev[best.id] ?? true,
-      }));
-
-      getRouteToATM(best.coordinate);
-    }
-  };
-
-  const getTravelTime = async (atmCoord: { longitude: any; latitude: any; }) => {
-    if (!region) return null;
-    try {
-      const res = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${region.longitude},${region.latitude};${atmCoord.longitude},${atmCoord.latitude}?overview=false`
-      );
-      const data = await res.json();
-      return Math.round(data.routes[0].duration / 60);
-    } catch (e) {
-      return null;
-    }
-  };
-
-  const getRouteToATM = async (atmCoord: { longitude: any; latitude: any; }) => {
+  const getRouteToATM = async (atmCoord: { longitude: number; latitude: number }) => {
     if (!region) return;
 
     try {
@@ -210,24 +223,45 @@ export default function Home() {
       );
 
       const data = await response.json();
-      const coords = data.routes[0].geometry.coordinates.map(
-        ([lon, lat]: [number, number]) => ({
-          latitude: lat,
-          longitude: lon,
-        })
-      );
-      const duration = data.routes[0].duration;
+      if (data.routes && data.routes.length > 0) {
+        const coords = data.routes[0].geometry.coordinates.map(
+          ([lon, lat]: [number, number]) => ({
+            latitude: lat,
+            longitude: lon,
+          })
+        );
+        const duration = data.routes[0].duration;
 
-      setRouteCoords(coords);
-      setTravelTime(Math.round(duration / 60));
+        setRouteCoords(coords);
+        setTravelTime(Math.round(duration / 60));
+      }
     } catch (error) {
       console.error("Erreur calcul itinéraire :", error);
     }
   };
 
-  const filteredATMs = atmMarkers.filter((atm) =>
-    atm.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredATMs = atmMarkers.filter((atm) => {
+    const matchesSearch = atm.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         atm.bank.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    let matchesFilter = true;
+    switch (selectedFilter) {
+      case 'open':
+        matchesFilter = atm.isOpen;
+        break;
+      case 'nearby':
+        matchesFilter = atm.distance <= 2;
+        break;
+      case 'bank':
+        matchesFilter = selectedBank === 'all' || atm.bank === selectedBank;
+        break;
+      default:
+        matchesFilter = true;
+    }
+    
+    return matchesSearch && matchesFilter;
+  });
+
 
   useEffect(() => {
     if (showModal) {
@@ -259,20 +293,15 @@ export default function Home() {
           style={styles.map}
           region={region}
           showsUserLocation
+          showsMyLocationButton={false}
+          provider={PROVIDER_GOOGLE}
+          customMapStyle={isDark ? darkMapStyle : []}
         >
-          <Marker
-            coordinate={{
-              latitude: region.latitude,
-              longitude: region.longitude,
-            }}
-            title="Votre position"
-            pinColor="blue"
-          />
-
           {filteredATMs.map((atm) => (
             <Marker
               key={atm.id}
               coordinate={atm.coordinate}
+
               title={atm.title}
               description={atm.description}
               image={atm.icon}
@@ -292,11 +321,17 @@ export default function Home() {
             <Polyline
               coordinates={routeCoords}
               strokeWidth={4}
-              strokeColor="#00f"
+              strokeColor={theme.primary}
+              lineDashPattern={[5, 5]}
             />
           )}
         </MapView>
-      )}
+      );
+    }
+  };
+
+  const uniqueBanks = [...new Set(atmMarkers.map(atm => atm.bank))];
+
 
       {/* Pour positionner le bouton */}
       <View style={{
@@ -309,43 +344,108 @@ export default function Home() {
           style={[styles.button, { backgroundColor: "#28a745" }]}
           onPress={getCurrentLocation}
         >
-          <Ionicons name="locate" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
+          <View style={styles.atmListHeader}>
+            <Text style={[styles.atmListTitle, { color: theme.text }]}>
+              Distributeurs trouvés ({filteredATMs.length})
+            </Text>
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.atmListContent}
+          >
+            {filteredATMs
+              .sort((a, b) => a.distance - b.distance)
+              .map((atm) => (
+                <TouchableOpacity
+                  key={atm.id}
+                  style={[
+                    styles.atmCard,
+                    {
+                      backgroundColor: theme.background,
+                      borderColor: selectedATM?.id === atm.id ? theme.primary : theme.border,
+                    }
+                  ]}
+                  onPress={() => handleATMPress(atm)}
+                >
+                  <View style={styles.atmCardHeader}>
+                    <Image source={{ uri: atm.logo }} style={styles.bankLogo} />
+                    <View style={styles.atmCardInfo}>
+                      <Text style={[styles.atmCardBank, { color: bankColors[atm.bank] || theme.primary }]}>
+                        {atm.bank}
+                      </Text>
+                      <View style={[
+                        styles.atmStatusIndicator,
+                        { backgroundColor: atm.isOpen ? theme.success : theme.warning }
+                      ]} />
+                    </View>
+                  </View>
+                  
+                  <Text style={[styles.atmCardTitle, { color: theme.text }]} numberOfLines={1}>
+                    {atm.name}
+                  </Text>
+                  
+                  <Text style={[styles.atmCardDescription, { color: theme.textSecondary }]} numberOfLines={2}>
+                    {atm.address}
+                  </Text>
+                  
+                  <View style={styles.atmCardFooter}>
+                    <View style={styles.atmCardDistance}>
+                      <MapPin size={14} color={theme.textSecondary} />
+                      <Text style={[styles.atmCardDistanceText, { color: theme.textSecondary }]}>
+                        {atm.distance.toFixed(1)} km
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.atmCardRating}>
+                      <Star size={14} color={theme.accent} />
+                      <Text style={[styles.atmCardRatingText, { color: theme.textSecondary }]}>
+                        {atm.rating.toFixed(1)}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+          </ScrollView>
+        </Animated.View>
+      )}
 
-      <TextInput
-        style={styles.searchBar}
-        placeholder="Rechercher une banque..."
-        onChangeText={setSearchQuery}
-        value={searchQuery}
-      />
-
-      {filteredATMs.length > 0 && (
-        <View style={{ maxHeight: 200, margin: 10, backgroundColor: "#fff", borderRadius: 8, elevation: 2 }}>
-          <Text style={{ fontWeight: "bold", fontSize: 16, margin: 10 }}>Liste des distributeurs</Text>
-          {filteredATMs
-            .sort((a, b) => (a.distance ?? 9999) - (b.distance ?? 9999))
-            .map((atm) => (
+      {/* ATM Details Modal */}
+      <Modal visible={showModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <Animated.View 
+            style={[
+              styles.modalContainer,
+              { backgroundColor: theme.surface }
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderInfo}>
+                <Image source={{ uri: selectedATM?.logo }} style={styles.modalBankLogo} />
+                <View>
+                  <Text style={[styles.modalBankName, { color: bankColors[selectedATM?.bank] || theme.primary }]}>
+                    {selectedATM?.bank}
+                  </Text>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>
+                    {selectedATM?.name}
+                  </Text>
+                  <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+                    {selectedATM?.address}
+                  </Text>
+                </View>
+              </View>
               <TouchableOpacity
-                key={atm.id}
-                style={{ padding: 10, borderBottomWidth: 1, borderColor: "#eee" }}
+                style={[styles.modalCloseButton, { backgroundColor: theme.background }]}
                 onPress={() => {
-                  setSelectedATM(atm);
-                  setShowModal(true);
-                  getRouteToATM(atm.coordinate);
+                  setShowModal(false);
+                  setRouteCoords([]);
+                  setTravelTime(null);
                 }}
               >
-                <Text style={{ fontWeight: "bold" }}>{atm.title}</Text>
-                <Text>{atm.description}</Text>
-                {atm.distance !== undefined && (
-                  <Text style={{ color: "#888" }}>
-                    {atm.distance.toFixed(2)} km
-                  </Text>
-                )}
+                <X size={20} color={theme.text} />
               </TouchableOpacity>
-            ))}
-        </View>
-      )}
+            </View>
 
       <Modal visible={showModal} transparent animationType="none">
         <View style={styles.modalContainer}>
@@ -453,24 +553,22 @@ export default function Home() {
                 placeholderTextColor="#aaa"
               />
               <TouchableOpacity
-                style={styles.commentSendButton}
+                style={[styles.modalActionButton, styles.modalActionPrimary, { backgroundColor: theme.primary }]}
                 onPress={() => {
-                  const commentKey = `${selectedATM?.id}_${user?.id}`;
-                  const comment = comments[commentKey]?.trim();
-
-                  if (!comment) {
-                    Alert.alert(
-                      "Commentaire vide",
-                      "Veuillez entrer un commentaire avant de l’envoyer."
-                    );
-                    return;
-                  }
-
-                  console.log("Commentaire posté :", comment);
-                  Alert.alert("Merci !", "Votre commentaire a été enregistré.");
+                  Alert.alert(
+                    "Navigation",
+                    "Ouvrir dans l'application de navigation ?",
+                    [
+                      { text: "Annuler", style: "cancel" },
+                      { text: "Ouvrir", onPress: () => console.log("Navigation started") }
+                    ]
+                  );
                 }}
               >
-                <Ionicons name="send" size={20} color="white" />
+                <Navigation size={18} color="#ffffff" />
+                <Text style={[styles.modalActionText, { color: "#ffffff" }]}>
+                  Naviguer
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -518,9 +616,6 @@ function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
-
-
-
 const styles = StyleSheet.create<{
   container: ViewStyle;
   map: ViewStyle;
@@ -549,63 +644,284 @@ const styles = StyleSheet.create<{
     alignItems: "center",
     elevation: 3,
   },
-  buttonText: {
+  headerSubtitle: {
     fontSize: 14,
-    textAlign: "center",
-    flexWrap: "wrap",
-    color: "white",
-    fontWeight: "500",
+    fontFamily: 'Inter-Regular',
   },
-  searchBar: {
-    position: "absolute",
-    top: 40,
-    left: 20,
-    right: 20,
-    backgroundColor: "#fff",
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 8,
+  profileButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontFamily: 'Inter-SemiBold',
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     elevation: 2,
   },
-  modalContainer: {
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    gap: 12,
+  },
+  searchInput: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
   },
-  modalContent: {
-    width: "90%",
-    maxWidth: 400,
-    backgroundColor: "white",
-    borderRadius: 10,
+  filterButton: {
+    padding: 8,
+    borderRadius: 12,
+  },
+  filtersContainer: {
+    paddingTop: 12,
+    gap: 8,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    marginRight: 8,
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+  },
+  bankFilters: {
+    marginTop: 8,
+  },
+  bankChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  bankChipText: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+  },
+  mapContainer: {
+    flex: 1,
+    margin: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  map: {
+    flex: 1,
+  },
+  customMarker: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 200,
+    right: 20,
+    gap: 12,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabPrimary: {},
+  fabSecondary: {},
+  atmListContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 20,
+    paddingBottom: 34,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  atmListHeader: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  atmListTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  atmListContent: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  atmCard: {
+    width: 280,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  atmCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 12,
+  },
+  bankLogo: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  atmCardInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  atmCardBank: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+  },
+  atmStatusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  atmCardTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 4,
+  },
+  atmCardDescription: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  atmCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  atmCardDistance: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  atmCardDistanceText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  atmCardRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  atmCardRatingText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: height * 0.8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     padding: 20,
-    alignItems: "center",
+    paddingBottom: 16,
   },
-  modalText: {
-    fontSize: 14,
-    textAlign: "center",
-    flexWrap: "wrap",
-    marginBottom: 10,
-    width: "100%",
-    color: "#333",
+  modalHeaderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
   },
-  modalTextInline: {
+  modalBankLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  modalBankName: {
     fontSize: 14,
-    color: "#333",
-    marginBottom: 10,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 2,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
+    fontFamily: 'Poppins-SemiBold',
+    marginBottom: 4,
   },
-  confirmBtn: {
-    paddingVertical: 12,
+  modalSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    lineHeight: 20,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    flex: 1,
     paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
-    width: "100%",
   },
   card: {
     width: "100%",
@@ -627,44 +943,121 @@ const styles = StyleSheet.create<{
     marginBottom: 10,
     flexWrap: "wrap",
   },
-
-  dispoToggleBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
+  modalSectionTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 12,
   },
-
-  toggleText: {
-    color: "white",
-    fontWeight: "bold",
+  modalInfoGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalInfoCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalInfoLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  modalInfoValue: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+  },
+  servicesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  serviceChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  serviceText: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+  },
+  hoursContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  hoursText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Medium',
+  },
+  availabilityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+  },
+  availabilityInfo: {
+    flex: 1,
+  },
+  availabilityText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Medium',
+    marginBottom: 4,
+  },
+  availabilitySubtext: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+  },
+  availabilityToggle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  commentContainer: {
+    borderRadius: 12,
+    padding: 16,
   },
   commentInput: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 10,
-    textAlignVertical: "top",
-    flex: 1,
     fontSize: 14,
-    color: "#333",
+    fontFamily: 'Inter-Regular',
+    lineHeight: 20,
+    textAlignVertical: 'top',
+    marginBottom: 12,
   },
-  commentInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f0f0f0",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    width: "100%",
-    marginTop: 10,
-  },
-
   commentSendButton: {
-    backgroundColor: "#007bff",
+    alignSelf: 'flex-end',
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    padding: 8,
-    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    padding: 20,
+    paddingTop: 16,
+    gap: 12,
+  },
+  modalActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  modalActionPrimary: {},
+  modalActionSecondary: {},
+  modalActionText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
   },
 });
