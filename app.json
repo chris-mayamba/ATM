@@ -1,27 +1,29 @@
 {
   "expo": {
-    "name": "atm-app",
-    "slug": "atm-app",
-    "version": "1.0.0",
+    "name": "ATM Finder Lubumbashi",
+    "slug": "atm-finder-lubumbashi",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon2.png",
-    "scheme": "atmapp",
+    "scheme": "atmfinder",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.atmfinder.lubumbashi"
     },
     "android": {
       "config": {
         "googleMaps": {
-          "apiKey": "TA_CLE_API"
+          "apiKey": "AIzaSyAq_iuJqvPLnoVKkxwlcibyGrSjQyvDzao"
         }
       },
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.atmfinder.lubumbashi"
     },
     "web": {
       "bundler": "metro",
@@ -42,6 +44,9 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "googleClientId": "YOUR_GOOGLE_CLIENT_ID"
     }
   }
 }
