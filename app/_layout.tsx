@@ -16,12 +16,14 @@ import {
   Poppins_700Bold
 } from '@expo-google-fonts/poppins';
 import { SplashScreen } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect } from 'react'
+import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function Layout() {
+  useFrameworkReady();
   const [fontsLoaded, fontError] = useFonts({
     'Inter-Regular': Inter_400Regular,
     'Inter-Medium': Inter_500Medium,
