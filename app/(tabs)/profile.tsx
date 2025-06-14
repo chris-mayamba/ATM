@@ -11,6 +11,8 @@ import {
   StatusBar,
   Animated,
   Alert,
+  ScrollView,
+  ActivityIndicator
 } from "react-native";
 import { useSession } from "../../ctx";
 import { Client, Databases, Query } from "appwrite";
