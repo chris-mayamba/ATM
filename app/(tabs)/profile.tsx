@@ -12,9 +12,7 @@ import {
   Animated,
   Alert,
   ScrollView,
-
   ActivityIndicator
-
 } from "react-native";
 import { useSession } from "../../ctx";
 import { Client, Databases, Query } from "appwrite";
@@ -85,6 +83,8 @@ export default function ProfileScreen() {
       try {
         if (!user) return;
         setIsLoading(true);
+        
+        // Only try to fetch history if user is properly authenticated
         const response = await databases.listDocuments(
           "683ca4080011a598c3a6",
           "683ca6bf00206a77511a",
@@ -92,13 +92,19 @@ export default function ProfileScreen() {
         );
         setHistorique(response.documents);
       } catch (err) {
-        console.error("Erreur lors du chargement de l'historique :", err);
+        console.log("Could not load history (user may not have permission):", err);
+        // Don't show error to user, just set empty history
+        setHistorique([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchHistorique();
+    if (user) {
+      fetchHistorique();
+    } else {
+      setIsLoading(false);
+    }
   }, [user]);
 
   const handleLogout = () => {
@@ -119,6 +125,7 @@ export default function ProfileScreen() {
               await logout();
             } catch (error) {
               console.error('Logout error:', error);
+              Alert.alert('Erreur', 'Impossible de se déconnecter. Veuillez réessayer.');
             } finally {
               setLogoutLoading(false);
             }

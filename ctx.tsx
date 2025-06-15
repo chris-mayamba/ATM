@@ -26,9 +26,10 @@ export const SessionProvider = ({ children }) => {
   useEffect(() => {
     (async () => {
       try {
-        const user = await account.get();
-        setUser(user);
-      } catch {
+        const currentUser = await account.get();
+        setUser(currentUser);
+      } catch (error) {
+        console.log('No active session:', error);
         setUser(null);
       } finally {
         setLoading(false);
@@ -38,12 +39,14 @@ export const SessionProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      // Use the correct method name for Appwrite v11+
       await account.createEmailPasswordSession(email, password);
-      const user = await account.get();
-      setUser(user);
+      const currentUser = await account.get();
+      setUser(currentUser);
       router.replace('/(tabs)/home');
     } catch (error) {
-      throw error;
+      console.error('Login error:', error);
+      throw new Error(error.message || 'Erreur de connexion');
     }
   };
 
@@ -52,10 +55,13 @@ export const SessionProvider = ({ children }) => {
       if (Platform.OS === 'web') {
         // Web implementation
         const redirectUrl = window.location.origin + '/auth/callback';
-        const authUrl = `https://cloud.appwrite.io/v1/account/sessions/oauth2/google?project=682c932f001076e9cc68&success=${encodeURIComponent(redirectUrl)}&failure=${encodeURIComponent(redirectUrl)}`;
         
-        // Open in same window for web
-        window.location.href = authUrl;
+        // Create OAuth2 session
+        account.createOAuth2Session(
+          'google',
+          redirectUrl,
+          redirectUrl
+        );
       } else {
         // Mobile implementation
         const redirectTo = AuthSession.makeRedirectUri({
@@ -63,16 +69,18 @@ export const SessionProvider = ({ children }) => {
           path: '/auth/callback'
         });
 
+        const authUrl = `https://cloud.appwrite.io/v1/account/sessions/oauth2/google?project=682c932f001076e9cc68&success=${encodeURIComponent(redirectTo)}&failure=${encodeURIComponent(redirectTo)}`;
+
         const result = await WebBrowser.openAuthSessionAsync(
-          `https://cloud.appwrite.io/v1/account/sessions/oauth2/google?project=682c932f001076e9cc68&success=${encodeURIComponent(redirectTo)}&failure=${encodeURIComponent(redirectTo)}`,
+          authUrl,
           redirectTo
         );
 
         if (result.type === 'success') {
           // Check if user is authenticated
           try {
-            const user = await account.get();
-            setUser(user);
+            const currentUser = await account.get();
+            setUser(currentUser);
             router.replace('/(tabs)/home');
           } catch (error) {
             console.error('Failed to get user after Google auth:', error);
@@ -90,20 +98,38 @@ export const SessionProvider = ({ children }) => {
 
   const register = async (name, email, password, location = null) => {
     try {
+      // Create account
       await account.create('unique()', email, password, name);
-      await login(email, password);
-
+      
+      // Login after registration
+      await account.createEmailPasswordSession(email, password);
+      
+      // Get user data
+      const currentUser = await account.get();
+      
+      // Update preferences with location if provided
       if (location) {
-        await account.updatePrefs({
-          latitude: location.latitude,
-          longitude: location.longitude,
-        });
-
-        const updatedUser = await account.get();
-        setUser(updatedUser);
+        try {
+          await account.updatePrefs({
+            latitude: location.latitude,
+            longitude: location.longitude,
+          });
+          
+          // Get updated user data
+          const updatedUser = await account.get();
+          setUser(updatedUser);
+        } catch (prefError) {
+          console.log('Could not save location preferences:', prefError);
+          setUser(currentUser);
+        }
+      } else {
+        setUser(currentUser);
       }
+      
+      router.replace('/(tabs)/home');
     } catch (error) {
-      throw error;
+      console.error('Registration error:', error);
+      throw new Error(error.message || 'Erreur lors de la création du compte');
     }
   };
 
@@ -127,7 +153,8 @@ export const SessionProvider = ({ children }) => {
       loginWithGoogle, 
       logout, 
       register, 
-      loading 
+      loading,
+      setUser
     }}>
       {children}
     </SessionContext.Provider>
