@@ -11,11 +11,25 @@ import {
   StatusBar,
   Animated,
   Alert,
+  ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useSession } from "../../ctx";
 import { Client, Databases, Query } from "appwrite";
-import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
+import { 
+  User, 
+  Settings, 
+  Moon, 
+  Bell, 
+  Shield, 
+  LogOut, 
+  MapPin, 
+  Clock, 
+  Star,
+  ChevronRight,
+  FileText
+} from 'lucide-react-native';
 
 const client = new Client()
   .setEndpoint("https://cloud.appwrite.io/v1")
@@ -28,6 +42,7 @@ export default function ProfileScreen() {
   const { user, logout } = useSession();
   const [historique, setHistorique] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const colorScheme = useColorScheme();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(50)).current;
@@ -35,8 +50,8 @@ export default function ProfileScreen() {
   const toggleTheme = () => setIsDarkTheme((prev) => !prev);
 
   const theme = {
-    background: isDarkTheme ? '#0a0a0a' : '#f8fafc',
-    surface: isDarkTheme ? '#1a1a1a' : '#ffffff',
+    background: isDarkTheme ? '#0f0f23' : '#f8fafc',
+    surface: isDarkTheme ? '#1a1a2e' : '#ffffff',
     primary: '#3b82f6',
     secondary: '#10b981',
     accent: '#f59e0b',
@@ -89,13 +104,29 @@ export default function ProfileScreen() {
       "Déconnexion",
       "Êtes-vous sûr de vouloir vous déconnecter ?",
       [
-        { text: "Annuler", style: "cancel" },
-        { text: "Déconnexion", style: "destructive", onPress: logout }
+        { 
+          text: "Annuler", 
+          style: "cancel" 
+        },
+        { 
+          text: "Déconnexion", 
+          style: "destructive", 
+          onPress: async () => {
+            setLogoutLoading(true);
+            try {
+              await logout();
+            } catch (error) {
+              console.error('Logout error:', error);
+            } finally {
+              setLogoutLoading(false);
+            }
+          }
+        }
       ]
     );
   };
 
-  const StatCard = ({ icon, title, value, color }) => (
+  const StatCard = ({ icon: Icon, title, value, color }) => (
     <Animated.View 
       style={[
         styles.statCard, 
@@ -107,7 +138,7 @@ export default function ProfileScreen() {
       ]}
     >
       <View style={[styles.statIconContainer, { backgroundColor: color + '20' }]}>
-        <Ionicons name={icon} size={24} color={color} />
+        <Icon size={24} color={color} />
       </View>
       <Text style={[styles.statTitle, { color: theme.textSecondary }]}>{title}</Text>
       <Text style={[styles.statValue, { color: theme.text }]}>{value}</Text>
@@ -126,7 +157,7 @@ export default function ProfileScreen() {
       ]}
     >
       <View style={[styles.historyIconContainer, { backgroundColor: theme.primary + '20' }]}>
-        <Ionicons name="card" size={20} color={theme.primary} />
+        <MapPin size={20} color={theme.primary} />
       </View>
       <View style={styles.historyContent}>
         <Text style={[styles.historyTitle, { color: theme.text }]}>
@@ -145,8 +176,25 @@ export default function ProfileScreen() {
           })}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+      <ChevronRight size={20} color={theme.textSecondary} />
     </Animated.View>
+  );
+
+  const SettingItem = ({ icon: Icon, title, subtitle, onPress, rightElement, color = theme.textSecondary }) => (
+    <TouchableOpacity style={styles.settingItem} onPress={onPress}>
+      <View style={styles.settingLeft}>
+        <View style={[styles.settingIconContainer, { backgroundColor: color + '20' }]}>
+          <Icon size={20} color={color} />
+        </View>
+        <View>
+          <Text style={[styles.settingTitle, { color: theme.text }]}>{title}</Text>
+          <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
+            {subtitle}
+          </Text>
+        </View>
+      </View>
+      {rightElement || <ChevronRight size={20} color={theme.textSecondary} />}
+    </TouchableOpacity>
   );
 
   return (
@@ -172,14 +220,20 @@ export default function ProfileScreen() {
           >
             <View style={styles.profileSection}>
               <View style={styles.avatarContainer}>
-                <Text style={styles.avatarText}>
-                  {user?.name?.charAt(0).toUpperCase() || "?"}
-                </Text>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {user?.name?.charAt(0).toUpperCase() || "?"}
+                  </Text>
+                </View>
                 <View style={[styles.onlineIndicator, { backgroundColor: theme.success }]} />
               </View>
               <View style={styles.profileInfo}>
                 <Text style={styles.profileName}>{user?.name || 'Utilisateur'}</Text>
                 <Text style={styles.profileEmail}>{user?.email || 'email@example.com'}</Text>
+                <View style={styles.profileBadge}>
+                  <Star size={12} color="#ffffff" />
+                  <Text style={styles.profileBadgeText}>Membre Premium</Text>
+                </View>
               </View>
             </View>
             
@@ -187,7 +241,7 @@ export default function ProfileScreen() {
               style={styles.settingsButton}
               onPress={() => {}}
             >
-              <Ionicons name="settings-outline" size={24} color="#ffffff" />
+              <Settings size={24} color="#ffffff" />
             </TouchableOpacity>
           </Animated.View>
         </SafeAreaView>
@@ -197,19 +251,19 @@ export default function ProfileScreen() {
         {/* Stats Section */}
         <View style={styles.statsContainer}>
           <StatCard 
-            icon="location" 
+            icon={MapPin} 
             title="ATM Visités" 
             value={historique.length.toString()} 
             color={theme.primary} 
           />
           <StatCard 
-            icon="time" 
+            icon={Clock} 
             title="Cette Semaine" 
             value="3" 
             color={theme.secondary} 
           />
           <StatCard 
-            icon="star" 
+            icon={Star} 
             title="Points" 
             value="127" 
             color={theme.accent} 
@@ -229,55 +283,36 @@ export default function ProfileScreen() {
         >
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Préférences</Text>
           
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <View style={[styles.settingIconContainer, { backgroundColor: theme.accent + '20' }]}>
-                <Ionicons name="moon" size={20} color={theme.accent} />
-              </View>
-              <View>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>Thème sombre</Text>
-                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                  Activer le mode sombre
-                </Text>
-              </View>
-            </View>
-            <Switch 
-              value={isDarkTheme} 
-              onValueChange={toggleTheme}
-              trackColor={{ false: theme.border, true: theme.primary + '40' }}
-              thumbColor={isDarkTheme ? theme.primary : '#f4f3f4'}
-            />
-          </View>
+          <SettingItem
+            icon={Moon}
+            title="Thème sombre"
+            subtitle="Activer le mode sombre"
+            color={theme.accent}
+            rightElement={
+              <Switch 
+                value={isDarkTheme} 
+                onValueChange={toggleTheme}
+                trackColor={{ false: theme.border, true: theme.primary + '40' }}
+                thumbColor={isDarkTheme ? theme.primary : '#f4f3f4'}
+              />
+            }
+          />
 
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <View style={[styles.settingIconContainer, { backgroundColor: theme.secondary + '20' }]}>
-                <Ionicons name="notifications" size={20} color={theme.secondary} />
-              </View>
-              <View>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>Notifications</Text>
-                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                  Gérer les notifications
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-          </TouchableOpacity>
+          <SettingItem
+            icon={Bell}
+            title="Notifications"
+            subtitle="Gérer les notifications"
+            color={theme.secondary}
+            onPress={() => {}}
+          />
 
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <View style={[styles.settingIconContainer, { backgroundColor: theme.primary + '20' }]}>
-                <Ionicons name="shield-checkmark" size={20} color={theme.primary} />
-              </View>
-              <View>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>Confidentialité</Text>
-                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                  Paramètres de confidentialité
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-          </TouchableOpacity>
+          <SettingItem
+            icon={Shield}
+            title="Confidentialité"
+            subtitle="Paramètres de confidentialité"
+            color={theme.primary}
+            onPress={() => {}}
+          />
         </Animated.View>
 
         {/* History Section */}
@@ -315,7 +350,7 @@ export default function ProfileScreen() {
             />
           ) : (
             <View style={styles.emptyContainer}>
-              <Ionicons name="document-text-outline" size={48} color={theme.textSecondary} />
+              <FileText size={48} color={theme.textSecondary} />
               <Text style={[styles.emptyTitle, { color: theme.text }]}>Aucun historique</Text>
               <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
                 Vos visites d'ATM apparaîtront ici
@@ -335,11 +370,21 @@ export default function ProfileScreen() {
           ]}
         >
           <TouchableOpacity 
-            style={[styles.logoutButton, { backgroundColor: theme.error + '10', borderColor: theme.error + '30' }]}
+            style={[styles.logoutButton, { 
+              backgroundColor: theme.error + '10', 
+              borderColor: theme.error + '30' 
+            }]}
             onPress={handleLogout}
+            disabled={logoutLoading}
           >
-            <Ionicons name="log-out-outline" size={24} color={theme.error} />
-            <Text style={[styles.logoutText, { color: theme.error }]}>Se déconnecter</Text>
+            {logoutLoading ? (
+              <ActivityIndicator size="small" color={theme.error} />
+            ) : (
+              <LogOut size={24} color={theme.error} />
+            )}
+            <Text style={[styles.logoutText, { color: theme.error }]}>
+              {logoutLoading ? 'Déconnexion...' : 'Se déconnecter'}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
 
@@ -371,16 +416,18 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginRight: 16,
   },
-  avatarText: {
+  avatar: {
     width: 64,
     height: 64,
     borderRadius: 32,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
     color: '#ffffff',
     fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
-    lineHeight: 64,
+    fontFamily: 'Poppins-Bold',
   },
   onlineIndicator: {
     position: 'absolute',
@@ -397,13 +444,30 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
     color: '#ffffff',
     marginBottom: 4,
   },
   profileEmail: {
     fontSize: 14,
+    fontFamily: 'Inter-Regular',
     color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 8,
+  },
+  profileBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    gap: 4,
+  },
+  profileBadgeText: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
   },
   settingsButton: {
     width: 44,
@@ -444,13 +508,13 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Inter-Medium',
     textAlign: 'center',
     marginBottom: 4,
   },
   statValue: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
     textAlign: 'center',
   },
   section: {
@@ -471,11 +535,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
   },
   seeAllText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Inter-SemiBold',
   },
   settingItem: {
     flexDirection: 'row',
@@ -498,11 +562,12 @@ const styles = StyleSheet.create({
   },
   settingTitle: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'Inter-SemiBold',
     marginBottom: 2,
   },
   settingSubtitle: {
     fontSize: 12,
+    fontFamily: 'Inter-Regular',
   },
   historyItem: {
     flexDirection: 'row',
@@ -528,15 +593,17 @@ const styles = StyleSheet.create({
   },
   historyTitle: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'Inter-SemiBold',
     marginBottom: 2,
   },
   historySubtitle: {
     fontSize: 14,
+    fontFamily: 'Inter-Regular',
     marginBottom: 4,
   },
   historyDate: {
     fontSize: 12,
+    fontFamily: 'Inter-Regular',
   },
   loadingContainer: {
     alignItems: 'center',
@@ -545,6 +612,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
+    fontFamily: 'Inter-Regular',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -552,12 +620,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'Inter-SemiBold',
     marginTop: 12,
     marginBottom: 4,
   },
   emptySubtitle: {
     fontSize: 14,
+    fontFamily: 'Inter-Regular',
     textAlign: 'center',
   },
   logoutButton: {
@@ -571,6 +640,6 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter-SemiBold',
   },
 });
