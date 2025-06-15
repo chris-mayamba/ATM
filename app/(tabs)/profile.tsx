@@ -12,7 +12,9 @@ import {
   Animated,
   Alert,
   ScrollView,
-  ActivityIndicator,
+
+  ActivityIndicator
+
 } from "react-native";
 import { useSession } from "../../ctx";
 import { Client, Databases, Query } from "appwrite";
