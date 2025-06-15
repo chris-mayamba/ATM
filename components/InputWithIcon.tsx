@@ -16,7 +16,11 @@ export default function InputWithIcon({
   const [isSecure, setIsSecure] = useState(secureTextEntry);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, borderColor: theme.border }]}>
+    <View style={[styles.container, { 
+      backgroundColor: theme.background, 
+      borderColor: theme.border,
+      shadowColor: theme.text
+    }]}>
       <Icon size={20} color={theme.textSecondary} style={styles.icon} />
       <TextInput
         style={[styles.input, { color: theme.text }]}
@@ -49,11 +53,15 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
+    borderWidth: 2,
+    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
     marginBottom: 16,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   icon: {
     marginRight: 12,
