@@ -84,7 +84,7 @@ export default function ProfileScreen() {
         if (!user) return;
         setIsLoading(true);
         
-        // Only try to fetch history if user is properly authenticated
+        // Try to fetch history, but don't show errors to user if no permission
         const response = await databases.listDocuments(
           "683ca4080011a598c3a6",
           "683ca6bf00206a77511a",

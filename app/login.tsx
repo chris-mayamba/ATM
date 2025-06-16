@@ -14,7 +14,7 @@ import {
 import { useSession } from '../ctx';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react-native';
+import { Mail, Lock, ArrowRight, Sparkles } from 'lucide-react-native';
 import InputWithIcon from '@/components/InputWithIcon';
 import Animated, { 
   useSharedValue, 
@@ -22,7 +22,6 @@ import Animated, {
   withSpring,
   withSequence,
   withTiming,
-  withDelay
 } from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');

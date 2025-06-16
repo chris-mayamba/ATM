@@ -16,6 +16,7 @@ const SessionContext = createContext({
   register: async () => {},
   loginWithGoogle: async () => {},
   loading: true,
+  setUser: () => {},
 });
 
 export const SessionProvider = ({ children }) => {
@@ -77,6 +78,9 @@ export const SessionProvider = ({ children }) => {
         );
 
         if (result.type === 'success') {
+          // Wait a bit for the session to be established
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
           // Check if user is authenticated
           try {
             const currentUser = await account.get();

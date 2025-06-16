@@ -16,7 +16,7 @@ export default function AuthCallback() {
     const handleCallback = async () => {
       try {
         // Wait a bit for the OAuth session to be established
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Check if user is authenticated after OAuth callback
         const user = await account.get();
