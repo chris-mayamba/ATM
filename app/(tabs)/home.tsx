@@ -40,6 +40,7 @@ import {
   Building2
 } from 'lucide-react-native';
 import { lubumbashiATMs, bankColors, getBankLogo } from '../../data/atmData';
+import TransportModal from '../../components/TransportModal'; // Ajoute ceci
 
 // Platform-specific imports
 let MapView: any = null;
@@ -107,6 +108,10 @@ export default function HomeScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'open' | 'nearby' | 'bank'>('all');
   const [selectedBank, setSelectedBank] = useState<string>('all');
+  const [showTransportModal, setShowTransportModal] = useState(false); // Ajoute
+  const [pendingATM, setPendingATM] = useState<ATMMarker | null>(null); // Ajoute
+  const [selectedTransport, setSelectedTransport] = useState<any>(null); // Ajoute
+  const [estimatedTime, setEstimatedTime] = useState<number | null>(null); // Ajoute
 
   useEffect(() => {
     Animated.parallel([
@@ -259,13 +264,31 @@ export default function HomeScreen() {
   });
 
   const handleATMPress = (atm: ATMMarker) => {
-    setSelectedATM(atm);
-    setShowModal(true);
-    setAtmDisponibilities((prev) => ({
-      ...prev,
-      [atm.id]: prev[atm.id] ?? true,
-    }));
-    getRouteToATM(atm.coordinate);
+    setPendingATM(atm);
+    setShowTransportModal(true);
+  };
+
+  const handleTransportSelect = (mode: any) => {
+    setShowTransportModal(false);
+    setSelectedTransport(mode);
+    if (pendingATM && mode) {
+      setSelectedATM(pendingATM);
+      // Calcul du temps estimé (distance en km / vitesse en km/h * 60 pour avoir des minutes)
+      const time = Math.round((pendingATM.distance / mode.speed) * 60);
+      setEstimatedTime(time);
+      setAtmDisponibilities((prev) => ({
+        ...prev,
+        [pendingATM.id]: prev[pendingATM.id] ?? true,
+      }));
+      getRouteToATM(pendingATM.coordinate);
+      setPendingATM(null);
+      setShowModal(true);
+    } else {
+      // Annulation
+      setPendingATM(null);
+      setSelectedTransport(null);
+      setEstimatedTime(null);
+    }
   };
 
   useEffect(() => {
@@ -399,6 +422,12 @@ export default function HomeScreen() {
         </ScrollView>
       </View>
 
+      {/* Modale de choix du transport */}
+      <TransportModal
+        visible={showTransportModal}
+        onSelect={handleTransportSelect}
+      />
+
       {/* Modal des détails ATM */}
       <Modal visible={showModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -482,10 +511,10 @@ export default function HomeScreen() {
               />
             </View>
 
-            {/* Temps estimé */}
-            {travelTime && (
+            {/* Temps estimé selon le transport choisi */}
+            {selectedTransport && estimatedTime !== null && (
               <Text style={[styles.modalText, { color: "#007bff", fontWeight: "bold" }]}>
-                Temps estimé : {travelTime} min
+                {selectedTransport.icon} {selectedTransport.label} • Temps estimé : {estimatedTime} min
               </Text>
             )}
 
