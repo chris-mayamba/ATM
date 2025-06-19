@@ -112,6 +112,8 @@ export default function HomeScreen() {
   const [pendingATM, setPendingATM] = useState<ATMMarker | null>(null); // Ajoute
   const [selectedTransport, setSelectedTransport] = useState<any>(null); // Ajoute
   const [estimatedTime, setEstimatedTime] = useState<number | null>(null); // Ajoute
+  const [atmTransports, setAtmTransports] = useState<Record<string, { transport: any, estimatedTime: number }>>({});
+  const [openedFromList, setOpenedFromList] = useState(false);
 
   useEffect(() => {
     Animated.parallel([
@@ -263,28 +265,49 @@ export default function HomeScreen() {
     return matchesSearch && matchesFilter;
   });
 
+  // Fonction pour le clic sur un ATM dans la liste (ouvre TransportModal)
   const handleATMPress = (atm: ATMMarker) => {
     setPendingATM(atm);
     setShowTransportModal(true);
   };
 
+  // Fonction pour le clic sur un marqueur de la carte (ouvre directement la modale ATM)
+  const handleATMMarkerPress = (atm: ATMMarker) => {
+    if (!hasTransportForATM(atm.id)) {
+      // Optionnel : tu peux afficher un message à l'utilisateur
+      Alert.alert(
+        "Choix du transport requis",
+        "Veuillez d'abord choisir un moyen de transport ."
+      );
+      return; // On n'ouvre pas la modale
+    }
+    setSelectedATM(atm);
+    setSelectedTransport(atmTransports[atm.id].transport);
+    setEstimatedTime(atmTransports[atm.id].estimatedTime);
+    setOpenedFromList(false);
+    setShowModal(true);
+  };
+
   const handleTransportSelect = (mode: any) => {
     setShowTransportModal(false);
-    setSelectedTransport(mode);
     if (pendingATM && mode) {
       setSelectedATM(pendingATM);
-      // Calcul du temps estimé (distance en km / vitesse en km/h * 60 pour avoir des minutes)
       const time = Math.round((pendingATM.distance / mode.speed) * 60);
       setEstimatedTime(time);
+      setSelectedTransport(mode);
+      setAtmTransports(prev => ({
+        ...prev,
+        [pendingATM.id]: { transport: mode, estimatedTime: time }
+      }));
       setAtmDisponibilities((prev) => ({
         ...prev,
         [pendingATM.id]: prev[pendingATM.id] ?? true,
       }));
       getRouteToATM(pendingATM.coordinate);
       setPendingATM(null);
+      setOpenedFromList(true); // <--- AJOUTÉ
       setShowModal(true);
     } else {
-      // Annulation
       setPendingATM(null);
       setSelectedTransport(null);
       setEstimatedTime(null);
@@ -310,40 +333,54 @@ export default function HomeScreen() {
     }
   }, [showModal]);
 
+  const hasTransportForATM = (atmId: string) => {
+    return !!atmTransports[atmId];
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: isDark ? "#000" : "#fff" }]}>
       {region && (
-        <MapView
-          ref={mapRef}
-          style={styles.map}
-          region={region}
-          showsUserLocation
-          showsMyLocationButton={false}
-          provider={PROVIDER_GOOGLE}
-          customMapStyle={isDark ? darkMapStyle : []}
-        >
-          {filteredATMs.map((atm) => (
-            <Marker
-              key={atm.id}
-              coordinate={atm.coordinate}
-              title={atm.title}
-              description={atm.description}
-              image={atm.icon}
-              onPress={() => handleATMPress(atm)}
-            />
-          ))}
+        Platform.OS !== 'web' ? (
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            region={region}
+            showsUserLocation
+            showsMyLocationButton={false}
+            provider={PROVIDER_GOOGLE}
+            customMapStyle={isDark ? darkMapStyle : []}
+          >
+            {filteredATMs.map((atm) => (
+              <Marker
+                key={atm.id}
+                coordinate={atm.coordinate}
+                title={atm.title}
+                description={atm.description}
+                image={atm.icon}
+                onPress={() => handleATMMarkerPress(atm)}
+              />
+            ))}
 
-          {routeCoords.length > 0 && (
-            <Polyline
-              coordinates={routeCoords}
-              strokeWidth={4}
-              strokeColor={theme.primary}
-              lineDashPattern={[5, 5]}
-            />
-          )}
-        </MapView>
-      )}
-
+            {routeCoords.length > 0 && (
+              <Polyline
+                coordinates={routeCoords}
+                strokeWidth={4}
+                strokeColor={theme.primary}
+                lineDashPattern={[5, 5]}
+              />
+            )}
+          </MapView>
+        ) : (
+          <WebMap
+            region={region}
+            atmMarkers={filteredATMs}
+            onMarkerPress={handleATMMarkerPress}
+            selectedATM={selectedATM}
+            routeCoords={routeCoords}
+            isDark={isDark}
+          />
+        )
+      )} {/* <-- Ajoute cette parenthèse fermante ici */}
       {/* Bouton de localisation */}
       <View style={styles.locationButtonContainer}>
         <TouchableOpacity
@@ -379,7 +416,7 @@ export default function HomeScreen() {
                     borderColor: selectedATM?.id === atm.id ? theme.primary : theme.border,
                   }
                 ]}
-                onPress={() => handleATMPress(atm)}
+                onPress={() => handleATMPress(atm)} // <-- Garde handleATMPress ici
               >
                 <View style={styles.atmCardHeader}>
                   <Image source={{ uri: atm.logo }} style={styles.bankLogo} />
@@ -462,12 +499,12 @@ export default function HomeScreen() {
             </Text>
 
             {/* Adresse et distance */}
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+            {/* <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
               <Ionicons name="location-outline" size={18} color="#888" style={{ marginRight: 4 }} />
               <Text style={{ color: "#555", fontSize: 14, flex: 1 }}>
                 {selectedATM?.raw?.address || "Adresse inconnue"}
               </Text>
-            </View>
+            </View> */}
             {selectedATM?.distance !== undefined && (
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
                 <Ionicons name="walk-outline" size={18} color="#888" style={{ marginRight: 4 }} />
@@ -535,50 +572,76 @@ export default function HomeScreen() {
                 }
                 placeholderTextColor="#aaa"
               />
-              <TouchableOpacity
-                style={[styles.modalActionButton, styles.modalActionPrimary, { backgroundColor: theme.primary }]}
-                onPress={() => {
-                  Alert.alert(
-                    "Navigation",
-                    "Ouvrir dans l'application de navigation ?",
-                    [
-                      { text: "Annuler", style: "cancel" },
-                      { text: "Ouvrir", onPress: () => console.log("Navigation started") }
-                    ]
-                  );
-                }}
-              >
-                <Navigation size={18} color="#ffffff" />
-                <Text style={[styles.modalActionText, { color: "#ffffff" }]}>
-                  Naviguer
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {/* Boutons actions */}
-            <TouchableOpacity
-              style={[
-                styles.confirmBtn,
-                { backgroundColor: "#007bff", marginTop: 16, marginBottom: 6, borderRadius: 20 },
-              ]}
-              onPress={() => setShowModal(false)}
-            >
-              <Text style={[styles.buttonText, { fontWeight: "bold" }]}>Démarrer l'itinéraire</Text>
-            </TouchableOpacity>
+            {openedFromList ? (
+              <>
+                {/* Bouton Démarrer l'itinéraire */}
+                <TouchableOpacity
+                  style={[
+                    styles.confirmBtn,
+                    { backgroundColor: "#007bff", marginTop: 16, marginBottom: 6, borderRadius: 20 },
+                  ]}
+                  onPress={() => setShowModal(false)}
+                >
+                  <Text style={[styles.buttonText, { fontWeight: "bold" }]}>Démarrer l'itinéraire</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.confirmBtn,
-                { backgroundColor: "#6c757d", borderRadius: 20 },
-              ]}
-              onPress={() => {
-                setShowModal(false);
-                setRouteCoords([]);
-                setTravelTime(null);
-              }}
-            >
-              <Text style={styles.buttonText}>Annuler</Text>
-            </TouchableOpacity>
+                {/* Bouton Naviguer */}
+                <TouchableOpacity
+                  style={[styles.modalActionButton, styles.modalActionPrimary, { backgroundColor: theme.primary }]}
+                  onPress={() => {
+                    Alert.alert(
+                      "Navigation",
+                      "Ouvrir dans l'application de navigation ?",
+                      [
+                        { text: "Annuler", style: "cancel" },
+                        { text: "Ouvrir", onPress: () => console.log("Navigation started") }
+                      ]
+                    );
+                  }}
+                >
+                  <Navigation size={18} color="#ffffff" />
+                  <Text style={[styles.modalActionText, { color: "#ffffff" }]}>
+                    Naviguer
+                  </Text>
+                </TouchableOpacity>
+
+                {/* ESPACE entre Naviguer et Annuler */}
+                <View style={{ height: 12 }} />
+
+                {/* Bouton Annuler arrondi gris */}
+                <TouchableOpacity
+                  style={[
+                    styles.confirmBtn,
+                    { backgroundColor: "#6c757d", borderRadius: 20 },
+                  ]}
+                  onPress={() => {
+                    setShowModal(false);
+                    setRouteCoords([]);
+                    setTravelTime(null);
+                  }}
+                >
+                  <Text style={styles.buttonText}>Annuler</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              // Sinon, bouton Retour noir sans border radius
+              <TouchableOpacity
+                style={[
+                  styles.confirmBtn,
+                  { backgroundColor: "#000", borderRadius: 0 },
+                ]}
+                onPress={() => {
+                  setShowModal(false);
+                  setRouteCoords([]);
+                  setTravelTime(null);
+                }}
+              >
+                <Text style={styles.buttonText}>Retour</Text>
+              </TouchableOpacity>
+            )}
           </Animated.View>
         </View>
       </Modal>
@@ -722,6 +785,24 @@ const styles = StyleSheet.create({
   atmCardDistance: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
+  },
+  atmCardDistanceText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  atmCardRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  atmCardRatingText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     gap: 4,
   },
   atmCardDistanceText: {
