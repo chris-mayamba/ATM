@@ -369,19 +369,19 @@ export default function ProfileScreen() {
         </Animated.View>
 
         {/* Logout Section */}
-        <Animated.View 
+        <Animated.View
           style={[
             styles.section,
-            { 
+            {
               transform: [{ translateY: slideAnim }],
               opacity: fadeAnim,
             }
           ]}
         >
-          <TouchableOpacity 
-            style={[styles.logoutButton, { 
-              backgroundColor: theme.error + '10', 
-              borderColor: theme.error + '30' 
+          <TouchableOpacity
+            style={[styles.logoutButton, {
+              backgroundColor: theme.error + '10',
+              borderColor: theme.error + '30'
             }]}
             onPress={handleLogout}
             disabled={logoutLoading}
@@ -394,7 +394,7 @@ export default function ProfileScreen() {
             <Text style={[styles.logoutText, { color: theme.error }]}>
               {logoutLoading ? 'Déconnexion...' : 'Se déconnecter'}
             </Text>
-          </TouchableOpacity>
+         </TouchableOpacity>
         </Animated.View>
 
         <View style={{ height: 40 }} />
