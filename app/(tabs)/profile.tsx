@@ -28,7 +28,8 @@ import {
   Clock, 
   Star,
   ChevronRight,
-  FileText
+  FileText,
+  Key
 } from 'lucide-react-native';
 
 const client = new Client()
@@ -313,6 +314,14 @@ export default function ProfileScreen() {
             subtitle="Gérer les notifications"
             color={theme.secondary}
             onPress={() => {}}
+          />
+          
+          <SettingItem
+          icon={Key}
+          title="Permissions"
+          subtitle="Gérer les autorisations"
+          color={theme.secondary}
+          onPress={() =>{}}
           />
 
           <SettingItem

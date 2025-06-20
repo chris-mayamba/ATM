@@ -40,6 +40,7 @@ import {
   Building2
 } from 'lucide-react-native';
 import { lubumbashiATMs, bankColors, getBankLogo } from '../../data/atmData';
+import { Databases, ID, Client } from "appwrite";
 
 // Platform-specific imports
 let MapView: any = null;
@@ -80,8 +81,35 @@ type ATMMarker = {
 };
 
 export default function HomeScreen() {
+  const client = new Client()
+    .setEndpoint("https://cloud.appwrite.io/v1")
+    .setProject("682c932f001076e9cc68");
+  const databases = new Databases(client);
+  
+  const saveHistory = async (atm: ATMMarker, user: any, travelTime: number | null) => {
+    if (!user) return;
+    try {
+      await databases.createDocument(
+        "683ca4080011a598c3a6", // Remplace par ton databaseId
+        "683ca6bf00206a77511a", // Remplace par ta collectionId
+        ID.unique(),
+        {
+          userId: user.$id,
+          nomATM: atm.name,
+          adresse: atm.address,
+          banque: atm.bank,
+          date: new Date().toISOString(),
+          operation: "Itinéraire",
+          travelTime: travelTime || null,
+        }
+      );
+    } catch (err) {
+      console.log("Erreur lors de l'enregistrement de l'historique :", err);
+    }
+  };
+
   const mapRef = useRef<MapView>(null);
-  const {user} = useSession();
+  const { user } = useSession();
 
   const isDark = useColorScheme() === "dark";
   const slideAnim = useRef(new Animated.Value(-100)).current;
@@ -97,7 +125,7 @@ export default function HomeScreen() {
 
   const [atmMarkers, setAtmMarkers] = useState<ATMMarker[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [routeCoords, setRouteCoords] = useState([]);
+  const [routeCoords, setRouteCoords] = useState<any[]>([]);
   const [travelTime, setTravelTime] = useState<number | null>(null);
   const [selectedATM, setSelectedATM] = useState<ATMMarker | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -532,9 +560,14 @@ export default function HomeScreen() {
                 styles.confirmBtn,
                 { backgroundColor: "#007bff", marginTop: 16, marginBottom: 6, borderRadius: 20 },
               ]}
-              onPress={() => setShowModal(false)}
+              onPress={async () => {
+                if (selectedATM && user) {
+                  await saveHistory(selectedATM, user, travelTime);
+                }
+                setShowModal(false);
+              }}
             >
-              <Text style={[styles.buttonText, { fontWeight: "bold" }]}>Démarrer l'itinéraire</Text>
+              <Text style={[styles.buttonText, { fontWeight: "bold"}]}>Démarrer l'itinéraire</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
