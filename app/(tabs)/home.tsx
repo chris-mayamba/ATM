@@ -40,7 +40,11 @@ import {
   Building2
 } from 'lucide-react-native';
 import { lubumbashiATMs, bankColors, getBankLogo } from '../../data/atmData';
+
+import { Databases, ID, Client } from "appwrite";
+
 import TransportModal from '../../components/TransportModal'; // Ajoute ceci
+
 
 // Platform-specific imports
 let MapView: any = null;
@@ -81,8 +85,35 @@ type ATMMarker = {
 };
 
 export default function HomeScreen() {
+  const client = new Client()
+    .setEndpoint("https://cloud.appwrite.io/v1")
+    .setProject("682c932f001076e9cc68");
+  const databases = new Databases(client);
+  
+  const saveHistory = async (atm: ATMMarker, user: any, travelTime: number | null) => {
+    if (!user) return;
+    try {
+      await databases.createDocument(
+        "683ca4080011a598c3a6",
+        "683ca6bf00206a77511a",
+        ID.unique(),
+        {
+          userId: user.$id,
+          nomATM: atm.name,
+          Adresse: atm.address,
+          date: new Date().toISOString(),
+          // banque: atm.bank,
+          // operation: "Itinéraire",
+          // travelTime: travelTime || null,
+        }
+      );
+    } catch (err) {
+      console.log("Erreur lors de l'enregistrement de l'historique :", err);
+    }
+  };
+
   const mapRef = useRef<MapView>(null);
-  const {user} = useSession();
+  const { user } = useSession();
 
   const isDark = useColorScheme() === "dark";
   const slideAnim = useRef(new Animated.Value(-100)).current;
@@ -98,7 +129,7 @@ export default function HomeScreen() {
 
   const [atmMarkers, setAtmMarkers] = useState<ATMMarker[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [routeCoords, setRouteCoords] = useState([]);
+  const [routeCoords, setRouteCoords] = useState<any[]>([]);
   const [travelTime, setTravelTime] = useState<number | null>(null);
   const [selectedATM, setSelectedATM] = useState<ATMMarker | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -558,90 +589,37 @@ export default function HomeScreen() {
             {/* Séparateur */}
             <View style={{ height: 1, backgroundColor: "#eee", width: "100%", marginVertical: 10 }} />
 
-            {/* Commentaire */}
-            <View style={styles.commentInputContainer}>
-              <TextInput
-                style={styles.commentInput}
-                placeholder="Laisser un commentaire..."
-                value={comments[`${selectedATM?.id}_${user?.id}`] || ""}
-                onChangeText={(text) =>
-                  setComments((prev) => ({
-                    ...prev,
-                    [`${selectedATM?.id}_${user?.id}`]: text,
-                  }))
-                }
-                placeholderTextColor="#aaa"
-              />
-            </View>
 
             {/* Boutons actions */}
-            {openedFromList ? (
-              <>
-                {/* Bouton Démarrer l'itinéraire */}
-                <TouchableOpacity
-                  style={[
-                    styles.confirmBtn,
-                    { backgroundColor: "#007bff", marginTop: 16, marginBottom: 6, borderRadius: 20 },
-                  ]}
-                  onPress={() => setShowModal(false)}
-                >
-                  <Text style={[styles.buttonText, { fontWeight: "bold" }]}>Démarrer l'itinéraire</Text>
-                </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.confirmBtn,
+                { backgroundColor: "#007bff", marginTop: 16, marginBottom: 6, borderRadius: 20 },
+              ]}
+              onPress={async () => {
+                if (selectedATM && user) {
+                  await saveHistory(selectedATM, user, travelTime);
+                }
+                setShowModal(false);
+              }}
+            >
+              <Text style={[styles.buttonText, { fontWeight: "bold"}]}>Démarrer l'itinéraire</Text>
+            </TouchableOpacity>
 
-                {/* Bouton Naviguer */}
-                <TouchableOpacity
-                  style={[styles.modalActionButton, styles.modalActionPrimary, { backgroundColor: theme.primary }]}
-                  onPress={() => {
-                    Alert.alert(
-                      "Navigation",
-                      "Ouvrir dans l'application de navigation ?",
-                      [
-                        { text: "Annuler", style: "cancel" },
-                        { text: "Ouvrir", onPress: () => console.log("Navigation started") }
-                      ]
-                    );
-                  }}
-                >
-                  <Navigation size={18} color="#ffffff" />
-                  <Text style={[styles.modalActionText, { color: "#ffffff" }]}>
-                    Naviguer
-                  </Text>
-                </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.confirmBtn,
+                { backgroundColor: "#6c757d", borderRadius: 20 },
+              ]}
+              onPress={() => {
+                setShowModal(false);
+                setRouteCoords([]);
+                setTravelTime(null);
+              }}
+            >
+              <Text style={styles.buttonText}>Annuler</Text>
+            </TouchableOpacity>
 
-                {/* ESPACE entre Naviguer et Annuler */}
-                <View style={{ height: 12 }} />
-
-                {/* Bouton Annuler arrondi gris */}
-                <TouchableOpacity
-                  style={[
-                    styles.confirmBtn,
-                    { backgroundColor: "#6c757d", borderRadius: 20 },
-                  ]}
-                  onPress={() => {
-                    setShowModal(false);
-                    setRouteCoords([]);
-                    setTravelTime(null);
-                  }}
-                >
-                  <Text style={styles.buttonText}>Annuler</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              // Sinon, bouton Retour noir sans border radius
-              <TouchableOpacity
-                style={[
-                  styles.confirmBtn,
-                  { backgroundColor: "#000", borderRadius: 0 },
-                ]}
-                onPress={() => {
-                  setShowModal(false);
-                  setRouteCoords([]);
-                  setTravelTime(null);
-                }}
-              >
-                <Text style={styles.buttonText}>Retour</Text>
-              </TouchableOpacity>
-            )}
           </Animated.View>
         </View>
       </Modal>
