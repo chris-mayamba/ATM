@@ -421,6 +421,7 @@ export default function ProfileScreen() {
           ]}
         >
           <TouchableOpacity
+
             style={[
               styles.logoutButton,
               {
@@ -428,6 +429,7 @@ export default function ProfileScreen() {
                 borderColor: theme.error + "30",
               },
             ]}
+        
             onPress={handleLogout}
             disabled={logoutLoading}
           >
@@ -439,7 +441,7 @@ export default function ProfileScreen() {
             <Text style={[styles.logoutText, { color: theme.error }]}>
               {logoutLoading ? "Déconnexion..." : "Se déconnecter"}
             </Text>
-          </TouchableOpacity>
+         </TouchableOpacity>
         </Animated.View>
 
         <View style={{ height: 40 }} />
