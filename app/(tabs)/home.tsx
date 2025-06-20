@@ -90,17 +90,17 @@ export default function HomeScreen() {
     if (!user) return;
     try {
       await databases.createDocument(
-        "683ca4080011a598c3a6", // Remplace par ton databaseId
-        "683ca6bf00206a77511a", // Remplace par ta collectionId
+        "683ca4080011a598c3a6",
+        "683ca6bf00206a77511a",
         ID.unique(),
         {
           userId: user.$id,
           nomATM: atm.name,
-          adresse: atm.address,
-          banque: atm.bank,
+          Adresse: atm.address,
           date: new Date().toISOString(),
-          operation: "Itinéraire",
-          travelTime: travelTime || null,
+          // banque: atm.bank,
+          // operation: "Itinéraire",
+          // travelTime: travelTime || null,
         }
       );
     } catch (err) {
@@ -520,39 +520,6 @@ export default function HomeScreen() {
             {/* Séparateur */}
             <View style={{ height: 1, backgroundColor: "#eee", width: "100%", marginVertical: 10 }} />
 
-            {/* Commentaire */}
-            <View style={styles.commentInputContainer}>
-              <TextInput
-                style={styles.commentInput}
-                placeholder="Laisser un commentaire..."
-                value={comments[`${selectedATM?.id}_${user?.id}`] || ""}
-                onChangeText={(text) =>
-                  setComments((prev) => ({
-                    ...prev,
-                    [`${selectedATM?.id}_${user?.id}`]: text,
-                  }))
-                }
-                placeholderTextColor="#aaa"
-              />
-              <TouchableOpacity
-                style={[styles.modalActionButton, styles.modalActionPrimary, { backgroundColor: theme.primary }]}
-                onPress={() => {
-                  Alert.alert(
-                    "Navigation",
-                    "Ouvrir dans l'application de navigation ?",
-                    [
-                      { text: "Annuler", style: "cancel" },
-                      { text: "Ouvrir", onPress: () => console.log("Navigation started") }
-                    ]
-                  );
-                }}
-              >
-                <Navigation size={18} color="#ffffff" />
-                <Text style={[styles.modalActionText, { color: "#ffffff" }]}>
-                  Naviguer
-                </Text>
-              </TouchableOpacity>
-            </View>
 
             {/* Boutons actions */}
             <TouchableOpacity
