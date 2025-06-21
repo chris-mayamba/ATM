@@ -33,6 +33,8 @@ import {
   Building2,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
+import * as Location from "expo-location";
+import * as Permissions from "expo-permissions";
 
 const client = new Client()
   .setEndpoint("https://cloud.appwrite.io/v1")
@@ -135,6 +137,34 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  };
+
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission refusée",
+          "L'application a besoin de la permission de localisation pour fonctionner correctement.",
+          [
+            {
+              text: "Annuler",
+              style: "cancel",
+            },
+            {
+              text: "Ouvrir les paramètres",
+              onPress: () => Linking.openSettings(),
+            },
+          ]
+        );
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error("Erreur lors de la demande de permission:", err);
+      return false;
+    }
   };
 
   const StatCard = ({ icon: Icon, title, value, color }) => (
@@ -348,20 +378,35 @@ export default function ProfileScreen() {
             }
           />
           <SettingItem
-            icon={Key}
+            icon={Shield}
             title="Permissions"
             subtitle="Gérer les autorisations"
-            color={theme.secondary}
-            onPress={() => {}}
+            color={theme.primary}
+            onPress={() => router.push("/settings/permissions")}
           />
-          // Utilisez cette fonction dans votre SettingItem
-<SettingItem
-  icon={Shield}
-  title="Confidentialité"
-  subtitle="Gérer vos paramètres"
-  color={theme.primary}
-  onPress={() => router.push('/settings/privacy')}
-/>
+          {/* <SettingItem
+            icon={MapPin}
+            title="Permissions de localisation"
+            subtitle="Gérer les autorisations de localisation"
+            color={theme.secondary}
+            onPress={async () => {
+              const hasPermission = await requestLocationPermission();
+              Alert.alert(
+                "Permissions de localisation",
+                hasPermission
+                  ? "Les permissions de localisation sont activées."
+                  : "Les permissions de localisation sont désactivées."
+              );
+            }}
+          /> */}
+
+          <SettingItem
+            icon={Shield}
+            title="Confidentialité"
+            subtitle="Gérer vos paramètres"
+            color={theme.primary}
+            onPress={() => router.push("/settings/privacy")}
+          />
         </Animated.View>
 
         {/* History Section */}
