@@ -14,7 +14,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import { useSession } from "../../ctx";
+import { useSession } from "@/ctx";
 import { Client, Databases, Query, ID } from "appwrite";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -32,6 +32,7 @@ import {
   Key,
   Building2,
 } from "lucide-react-native";
+import { useRouter } from "expo-router";
 
 const client = new Client()
   .setEndpoint("https://cloud.appwrite.io/v1")
@@ -49,6 +50,7 @@ export default function ProfileScreen() {
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(50)).current;
   const [showAllHistory, setShowAllHistory] = useState(false);
+  const router = useRouter();
 
   const toggleTheme = () => setIsDarkTheme((prev) => !prev);
 
@@ -331,7 +333,6 @@ export default function ProfileScreen() {
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
             Préférences
           </Text>
-
           <SettingItem
             icon={Moon}
             title="Thème sombre"
@@ -346,7 +347,6 @@ export default function ProfileScreen() {
               />
             }
           />
-
           <SettingItem
             icon={Key}
             title="Permissions"
@@ -354,61 +354,73 @@ export default function ProfileScreen() {
             color={theme.secondary}
             onPress={() => {}}
           />
-
-          <SettingItem
-            icon={Shield}
-            title="Confidentialité"
-            subtitle="Paramètres de confidentialité"
-            color={theme.primary}
-            onPress={() => {}}
-          />
+          // Utilisez cette fonction dans votre SettingItem
+<SettingItem
+  icon={Shield}
+  title="Confidentialité"
+  subtitle="Gérer vos paramètres"
+  color={theme.primary}
+  onPress={() => router.push('/settings/privacy')}
+/>
         </Animated.View>
-        
-      {/* History Section */}
-      <Animated.View 
-        style={[
-          styles.section,
-          { 
-            backgroundColor: theme.surface,
-            transform: [{ translateY: slideAnim }],
-            opacity: fadeAnim,
-          }
-        ]}
-      >
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Historique Récent</Text>
-          <TouchableOpacity onPress={() => setShowAllHistory(!showAllHistory)}>
-            <Text style={[styles.seeAllText, { color: theme.primary }]}>
-              {showAllHistory ? 'Réduire' : 'Voir tout'}
-            </Text>
-          </TouchableOpacity>
-        </View>
 
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.primary} />
-            <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-              Chargement de l'historique...
+        {/* History Section */}
+        <Animated.View
+          style={[
+            styles.section,
+            {
+              backgroundColor: theme.surface,
+              transform: [{ translateY: slideAnim }],
+              opacity: fadeAnim,
+            },
+          ]}
+        >
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              Historique Récent
             </Text>
+            <TouchableOpacity
+              onPress={() => setShowAllHistory(!showAllHistory)}
+            >
+              <Text style={[styles.seeAllText, { color: theme.primary }]}>
+                {showAllHistory ? "Réduire" : "Voir tout"}
+              </Text>
+            </TouchableOpacity>
           </View>
-        ) : historique.length > 0 ? (
-          <FlatList
-            data={showAllHistory ? historique : historique.slice(0, 3)}
-            keyExtractor={(item) => item.$id}
-            renderItem={({ item, index }) => <HistoryItem item={item} index={index} />}
-            scrollEnabled={false}
-            ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-          />
-        ) : (
-          <View style={styles.emptyContainer}>
-            <FileText size={48} color={theme.textSecondary} />
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>Aucun historique</Text>
-            <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-              Vos visites d'ATM apparaîtront ici
-            </Text>
-          </View>
-        )}
-      </Animated.View>
+
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.primary} />
+              <Text
+                style={[styles.loadingText, { color: theme.textSecondary }]}
+              >
+                Chargement de l'historique...
+              </Text>
+            </View>
+          ) : historique.length > 0 ? (
+            <FlatList
+              data={showAllHistory ? historique : historique.slice(0, 3)}
+              keyExtractor={(item) => item.$id}
+              renderItem={({ item, index }) => (
+                <HistoryItem item={item} index={index} />
+              )}
+              scrollEnabled={false}
+              ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+            />
+          ) : (
+            <View style={styles.emptyContainer}>
+              <FileText size={48} color={theme.textSecondary} />
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                Aucun historique
+              </Text>
+              <Text
+                style={[styles.emptySubtitle, { color: theme.textSecondary }]}
+              >
+                Vos visites d'ATM apparaîtront ici
+              </Text>
+            </View>
+          )}
+        </Animated.View>
 
         {/* Logout Section */}
         <Animated.View
@@ -421,7 +433,6 @@ export default function ProfileScreen() {
           ]}
         >
           <TouchableOpacity
-
             style={[
               styles.logoutButton,
               {
@@ -429,7 +440,6 @@ export default function ProfileScreen() {
                 borderColor: theme.error + "30",
               },
             ]}
-        
             onPress={handleLogout}
             disabled={logoutLoading}
           >
@@ -441,7 +451,7 @@ export default function ProfileScreen() {
             <Text style={[styles.logoutText, { color: theme.error }]}>
               {logoutLoading ? "Déconnexion..." : "Se déconnecter"}
             </Text>
-         </TouchableOpacity>
+          </TouchableOpacity>
         </Animated.View>
 
         <View style={{ height: 40 }} />
