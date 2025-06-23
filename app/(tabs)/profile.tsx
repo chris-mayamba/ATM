@@ -312,10 +312,6 @@ export default function ProfileScreen() {
                 <Text style={styles.profileEmail}>
                   {user?.email || "email@example.com"}
                 </Text>
-                <View style={styles.profileBadge}>
-                  <Star size={12} color="#ffffff" />
-                  <Text style={styles.profileBadgeText}>Membre Premium</Text>
-                </View>
               </View>
             </View>
 
@@ -328,25 +324,20 @@ export default function ProfileScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Stats Section */}
-        <View style={styles.statsContainer}>
-          <StatCard
-            icon={MapPin}
-            title="ATM Visités"
-            value={historique.length.toString()}
-            color={theme.primary}
-          />
-          <StatCard
-            icon={Clock}
-            title="Cette Semaine"
-            value="3"
-            color={theme.secondary}
-          />
-          <StatCard
-            icon={Star}
-            title="Points"
-            value="127"
-            color={theme.accent}
-          />
+        <View
+          style={[
+            styles.statsContainer,
+            { justifyContent: "center", alignItems: "center" },
+          ]}
+        >
+          <View style={{ width: 160 }}>
+            <StatCard
+              icon={MapPin}
+              title="ATM Visités"
+              value={historique.length.toString()}
+              color={theme.primary}
+            />
+          </View>
         </View>
 
         {/* Settings Section */}
@@ -366,14 +357,14 @@ export default function ProfileScreen() {
           <SettingItem
             icon={Moon}
             title="Thème sombre"
-            subtitle="Activer le mode sombre"
+            subtitle={isDarkTheme ? "Activé" : "Désactivé"}
             color={theme.accent}
             rightElement={
               <Switch
                 value={isDarkTheme}
                 onValueChange={toggleTheme}
-                trackColor={{ false: theme.border, true: theme.primary + "40" }}
-                thumbColor={isDarkTheme ? theme.primary : "#f4f3f4"}
+                trackColor={{ false: "#767577", true: "#81b0ff" }}
+                thumbColor={isDarkTheme ? "#f5dd4b" : "#f4f3f4"}
               />
             }
           />
@@ -455,28 +446,29 @@ export default function ProfileScreen() {
             },
           ]}
         >
-          <TouchableOpacity
-            style={[
-              styles.logoutButton,
-              {
-                backgroundColor: theme.error + "10",
-                borderColor: theme.error + "30",
-              },
-            ]}
-            onPress={handleLogout}
-            disabled={logoutLoading}
+          <LinearGradient
+            colors={["#ef4444", "#f97316"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.logoutButton}
           >
-            {logoutLoading ? (
-              <ActivityIndicator size="small" color={theme.error} />
-            ) : (
-              <LogOut size={24} color={theme.error} />
-            )}
-            <Text style={[styles.logoutText, { color: theme.error }]}>
-              {logoutLoading ? "Déconnexion..." : "Se déconnecter"}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              disabled={logoutLoading}
+              activeOpacity={0.7}
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              {logoutLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <LogOut size={22} color="#fff" />
+              )}
+              <Text style={styles.logoutText}>
+                {logoutLoading ? "Déconnexion..." : "Se déconnecter"}
+              </Text>
+            </TouchableOpacity>
+          </LinearGradient>
         </Animated.View>
-
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -722,13 +714,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: "#dc2626",
     gap: 8,
   },
   logoutText: {
     fontSize: 16,
-    fontFamily: "Inter-SemiBold",
+    fontFamily: "Poppins-SemiBold",
+    color: "#ffffff",
   },
 });

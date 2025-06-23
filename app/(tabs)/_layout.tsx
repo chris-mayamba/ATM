@@ -2,8 +2,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
+import { useSession } from '../../ctx';
 
 export default function TabsLayout() {
+  const { isDark } = useSession();
+
   return (
     <Tabs
       screenOptions={({ route }) => ({
@@ -28,13 +31,22 @@ export default function TabsLayout() {
           }
 
           return (
-            <Text style={{ color, fontSize: 12, marginBottom: 4, fontFamily: 'Inter-Medium' }}>
+            <Text style={{ 
+              color, 
+              fontSize: 12, 
+              marginBottom: 4, 
+              fontFamily: 'Inter-Medium' 
+            }}>
               {label}
             </Text>
           );
         },
         tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: 'gray',
+        tabBarInactiveTintColor: isDark ? '#999' : '#666',
+        tabBarStyle: {
+          backgroundColor: isDark ? '#1E1E1E' : '#FFF',
+          borderTopColor: isDark ? '#333' : '#EEE',
+        },
         headerShown: false,
       })}
     />

@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
 import { useSession } from '../../ctx';
 import { useRouter, Stack } from 'expo-router';
 import { ChevronRight, Trash2, Lock, EyeOff, Clock } from 'lucide-react-native';
@@ -132,29 +132,21 @@ export default function PrivacyScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Confidentialité' }} />
-      <ScrollView style={styles.container}>
-        <View style={styles.section}>
-          <SettingItem
-            icon={Clock}
-            title="Supprimer l'historique"
-            subtitle="Effacer toutes vos recherches"
-            onPress={handleCleanHistory}
-            color="#f59e0b"
-          />
-          {cleaningHistory && <ActivityIndicator style={styles.loading} />}
-        </View>
-
-        <View style={styles.section}>
-          <SettingItem
-            icon={Trash2}
-            title="Supprimer le compte"
-            subtitle="Action irréversible"
-            onPress={handleDeleteAccount}
-            color="#ef4444"
-          />
-          {loading && <ActivityIndicator style={styles.loading} />}
-        </View>
-      </ScrollView>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+        <ScrollView style={styles.container}>
+          <View style={styles.section}>
+            <SettingItem
+              icon={Clock}
+              title="Supprimer l'historique"
+              subtitle="Effacer toutes vos recherches"
+              onPress={handleCleanHistory}
+              color="#f59e0b"
+            />
+            {cleaningHistory && <ActivityIndicator style={styles.loading} />}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     </>
   );
 }
