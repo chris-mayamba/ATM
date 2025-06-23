@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { useSession } from '../../ctx';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronRight, Trash2, Lock, EyeOff } from 'lucide-react-native';
+import { ChevronRight, Trash2, Lock, EyeOff, Clock } from 'lucide-react-native';
 import { Client, Account, Databases, Query } from 'appwrite';
 import { useState } from 'react';
 
@@ -9,6 +9,7 @@ export default function PrivacyScreen() {
   const { user, logout } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [cleaningHistory, setCleaningHistory] = useState(false);
 
   const SettingItem = ({ icon: Icon, title, subtitle, onPress, color = '#64748b' }) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
@@ -45,6 +46,7 @@ export default function PrivacyScreen() {
               const databases = new Databases(client);
               const account = new Account(client);
 
+              // Supprimer l'historique
               const documents = await databases.listDocuments(
                 "683ca4080011a598c3a6",
                 "683ca6bf00206a77511a",
@@ -61,6 +63,7 @@ export default function PrivacyScreen() {
                 )
               );
 
+              // Supprimer le compte
               await account.delete();
               await logout();
               router.push('/');
@@ -69,6 +72,56 @@ export default function PrivacyScreen() {
               Alert.alert("Erreur", "La suppression a échoué : " + (error?.message || ""));
             } finally {
               setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleCleanHistory = async () => {
+    Alert.alert(
+      "Supprimer l'historique",
+      "Voulez-vous vraiment supprimer tout votre historique de recherche ?",
+      [
+        {
+          text: "Annuler",
+          style: "cancel"
+        },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            setCleaningHistory(true);
+            try {
+              const client = new Client()
+                .setEndpoint("https://cloud.appwrite.io/v1")
+                .setProject("682c932f001076e9cc68");
+
+              const databases = new Databases(client);
+
+              const documents = await databases.listDocuments(
+                "683ca4080011a598c3a6",
+                "683ca6bf00206a77511a",
+                [Query.equal("userId", user.$id)]
+              );
+
+              await Promise.all(
+                documents.documents.map(doc => 
+                  databases.deleteDocument(
+                    "683ca4080011a598c3a6",
+                    "683ca6bf00206a77511a",
+                    doc.$id
+                  )
+                )
+              );
+
+              Alert.alert("Succès", "Votre historique a été supprimé avec succès.");
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Erreur", "La suppression de l'historique a échoué : " + (error?.message || ""));
+            } finally {
+              setCleaningHistory(false);
             }
           }
         }
@@ -94,6 +147,17 @@ export default function PrivacyScreen() {
             subtitle="Contrôler votre visibilité"
             onPress={() => router.push('/settings/privacy-controls')}
           />
+        </View>
+
+        <View style={styles.section}>
+          <SettingItem
+            icon={Clock}
+            title="Supprimer l'historique"
+            subtitle="Effacer toutes vos recherches"
+            onPress={handleCleanHistory}
+            color="#f59e0b"
+          />
+          {cleaningHistory && <ActivityIndicator style={styles.loading} />}
         </View>
 
         <View style={styles.section}>
