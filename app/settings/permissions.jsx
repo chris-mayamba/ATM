@@ -11,7 +11,7 @@ import {
 import { useColorScheme } from 'react-native';
 import { MapPin, Bell, Shield, ChevronRight } from 'lucide-react-native';
 import * as Location from 'expo-location';
-import * as Notifications from 'expo-notifications';
+//import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 
 export default function PermissionsScreen() {
