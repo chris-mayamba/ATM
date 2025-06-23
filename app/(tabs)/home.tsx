@@ -305,11 +305,7 @@ export default function HomeScreen() {
               title={atm.title}
               description={atm.description}
               onPress={() => handleATMMarkerPress(atm)}
-            >
-              <View style={styles.markerContainer}>
-                <Image source={{ uri: atm.logo }} style={styles.markerImage} />
-              </View>
-            </Marker>
+            />
           ))}
 
           {routeCoords.length > 0 && (

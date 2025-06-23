@@ -65,7 +65,8 @@ export default function PrivacyScreen() {
               await logout();
               router.push('/');
             } catch (error) {
-              Alert.alert("Erreur", "La suppression a échoué");
+              console.error(error);
+              Alert.alert("Erreur", "La suppression a échoué : " + (error?.message || ""));
             } finally {
               setLoading(false);
             }
