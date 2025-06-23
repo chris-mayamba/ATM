@@ -37,14 +37,15 @@ import {
   Send,
   Filter,
   CreditCard,
-  Building2
+  Building2,
+  HelpCircle
 } from 'lucide-react-native';
 import { lubumbashiATMs, bankColors, getBankLogo } from '../../data/atmData';
 
 import { Databases, ID, Client } from "appwrite";
 
 import TransportModal from '../../components/TransportModal'; // Ajoute ceci
-
+import { useRouter } from 'expo-router';
 
 // Platform-specific imports
 let MapView: any = null;
@@ -114,6 +115,7 @@ export default function HomeScreen() {
 
   const mapRef = useRef<MapView>(null);
   const { user } = useSession();
+  const router = useRouter();
 
   const isDark = useColorScheme() === "dark";
   const slideAnim = useRef(new Animated.Value(-100)).current;
@@ -145,6 +147,7 @@ export default function HomeScreen() {
   const [estimatedTime, setEstimatedTime] = useState<number | null>(null); // Ajoute
   const [atmTransports, setAtmTransports] = useState<Record<string, { transport: any, estimatedTime: number }>>({});
   const [openedFromList, setOpenedFromList] = useState(false);
+  const [modalOrigin, setModalOrigin] = useState<'marker' | 'list' | null>(null); // Ajoute ceci
 
   useEffect(() => {
     Animated.parallel([
@@ -530,12 +533,6 @@ export default function HomeScreen() {
             </Text>
 
             {/* Adresse et distance */}
-            {/* <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-              <Ionicons name="location-outline" size={18} color="#888" style={{ marginRight: 4 }} />
-              <Text style={{ color: "#555", fontSize: 14, flex: 1 }}>
-                {selectedATM?.raw?.address || "Adresse inconnue"}
-              </Text>
-            </View> */}
             {selectedATM?.distance !== undefined && (
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
                 <Ionicons name="walk-outline" size={18} color="#888" style={{ marginRight: 4 }} />
@@ -589,40 +586,66 @@ export default function HomeScreen() {
             {/* Séparateur */}
             <View style={{ height: 1, backgroundColor: "#eee", width: "100%", marginVertical: 10 }} />
 
-
-            {/* Boutons actions */}
-            <TouchableOpacity
-              style={[
-                styles.confirmBtn,
-                { backgroundColor: "#007bff", marginTop: 16, marginBottom: 6, borderRadius: 20 },
-              ]}
-              onPress={async () => {
-                if (selectedATM && user) {
-                  await saveHistory(selectedATM, user, travelTime);
-                }
-                setShowModal(false);
-              }}
-            >
-              <Text style={[styles.buttonText, { fontWeight: "bold"}]}>Démarrer l'itinéraire</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.confirmBtn,
-                { backgroundColor: "#6c757d", borderRadius: 20 },
-              ]}
-              onPress={() => {
-                setShowModal(false);
-                setRouteCoords([]);
-                setTravelTime(null);
-              }}
-            >
-              <Text style={styles.buttonText}>Annuler</Text>
-            </TouchableOpacity>
-
+            {/* Affichage conditionnel des boutons selon l'origine */}
+            {openedFromList ? (
+              // Si ouvert depuis la liste, on garde les deux boutons
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.confirmBtn,
+                    { backgroundColor: "#007bff", marginTop: 16, marginBottom: 6, borderRadius: 20 },
+                  ]}
+                  onPress={async () => {
+                    if (selectedATM && user) {
+                      await saveHistory(selectedATM, user, travelTime);
+                    }
+                    setShowModal(false);
+                  }}
+                >
+                  <Text style={[styles.buttonText, { fontWeight: "bold"}]}>Démarrer l'itinéraire</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.confirmBtn,
+                    { backgroundColor: "#6c757d", borderRadius: 20 },
+                  ]}
+                  onPress={() => {
+                    setShowModal(false);
+                    setRouteCoords([]);
+                    setTravelTime(null);
+                  }}
+                >
+                  <Text style={styles.buttonText}>Annuler</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              // Si ouvert depuis un marqueur, on affiche seulement "Retour"
+              <TouchableOpacity
+                style={[
+                  styles.confirmBtn,
+                  { backgroundColor: "#6c757d", borderRadius: 20, marginTop: 16 },
+                ]}
+                onPress={() => {
+                  setShowModal(false);
+                  setRouteCoords([]);
+                  setTravelTime(null);
+                }}
+              >
+                <Text style={styles.buttonText}>Retour</Text>
+              </TouchableOpacity>
+            )}
           </Animated.View>
         </View>
       </Modal>
+
+      {/* Bouton d'aide en haut à droite */}
+      <TouchableOpacity
+        style={styles.helpButton}
+        onPress={() => router.push({ pathname: '/guide', params: { fromHelp: '1' } })}
+        activeOpacity={0.7}
+      >
+        <HelpCircle size={28} color="#007bff" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -860,5 +883,18 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  helpButton: {
+    position: 'absolute',
+    top: 48, // ajuste selon le header
+    right: 20,
+    zIndex: 100,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 6,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
   },
 });

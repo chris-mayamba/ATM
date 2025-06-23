@@ -1,11 +1,13 @@
 import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, useColorScheme, Dimensions, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router'; // Ajout pour la navigation
+import { useLocalSearchParams, useRouter } from 'expo-router'; // Remplace useRouter seul
 
 const { width } = Dimensions.get('window');
 
 const pages = [
+  
+ 
   {
     title: 'Création du compte',
     description: 'Créez votre compte pour accéder à toutes les fonctionnalités de l’application.',
@@ -46,7 +48,9 @@ const pages = [
 
 export default function GuideScreen() {
   const isDark = useColorScheme() === 'dark';
-  const router = useRouter(); // Ajout pour la navigation
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const fromHelp = params.fromHelp === '1';
   const theme = {
     background: isDark ? '#0f0f23' : '#f8fafc',
     surface: isDark ? '#1a1a2e' : '#ffffff',
@@ -70,9 +74,17 @@ export default function GuideScreen() {
       ))}
       <TouchableOpacity
         style={[styles.startButton, { backgroundColor: '#3b82f6' }]}
-        onPress={() => router.replace('/login')}
+        onPress={() => {
+          if (fromHelp) {
+            router.back();
+          } else {
+            router.replace('/login');
+          }
+        }}
       >
-        <Text style={styles.startButtonText}>Commencer</Text>
+        <Text style={styles.startButtonText}>
+          {fromHelp ? 'Retour' : 'Commencer'}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );

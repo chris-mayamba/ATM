@@ -40,15 +40,18 @@ export const SessionProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      // Use the correct method name for Appwrite v11+
-      await account.createEmailSession(email, password);
-      const currentUser = await account.get();
-      setUser(currentUser);
-      router.replace('/(tabs)/home');
-    } catch (error) {
-      console.error('Login error:', error);
-      throw new Error(error.message || 'Erreur de connexion');
+      // Vérifie si une session existe déjà
+      await account.get();
+      // Si oui, supprime la session active
+      await account.deleteSession('current');
+    } catch (e) {
+      // Pas de session active, on continue
     }
+    // Crée la nouvelle session
+    await account.createEmailSession(email, password);
+    const currentUser = await account.get();
+    setUser(currentUser);
+    router.replace('/(tabs)/home');
   };
 
   const loginWithGoogle = async () => {
