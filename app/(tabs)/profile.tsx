@@ -377,28 +377,6 @@ export default function ProfileScreen() {
               />
             }
           />
-          <SettingItem
-            icon={Shield}
-            title="Permissions"
-            subtitle="Gérer les autorisations"
-            color={theme.primary}
-            onPress={() => router.push("/settings/permissions")}
-          />
-          {/* <SettingItem
-            icon={MapPin}
-            title="Permissions de localisation"
-            subtitle="Gérer les autorisations de localisation"
-            color={theme.secondary}
-            onPress={async () => {
-              const hasPermission = await requestLocationPermission();
-              Alert.alert(
-                "Permissions de localisation",
-                hasPermission
-                  ? "Les permissions de localisation sont activées."
-                  : "Les permissions de localisation sont désactivées."
-              );
-            }}
-          /> */}
 
           <SettingItem
             icon={Shield}

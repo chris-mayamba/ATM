@@ -135,22 +135,6 @@ export default function PrivacyScreen() {
       <ScrollView style={styles.container}>
         <View style={styles.section}>
           <SettingItem
-            icon={Lock}
-            title="Sécurité"
-            subtitle="Paramètres de sécurité"
-            onPress={() => router.push('/settings/security')}
-            color="#3b82f6"
-          />
-          <SettingItem
-            icon={EyeOff}
-            title="Vie privée"
-            subtitle="Contrôler votre visibilité"
-            onPress={() => router.push('/settings/privacy-controls')}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <SettingItem
             icon={Clock}
             title="Supprimer l'historique"
             subtitle="Effacer toutes vos recherches"
@@ -214,7 +198,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 12,
     color: '#64748b',
-    marginTop: 2
+    marginTop: 23
   },
   loading: {
     marginVertical: 16

@@ -412,28 +412,32 @@ export default function HomeScreen() {
               },
             ]}
           >
-            {selectedATM?.logo && (
-              <View style={{ marginBottom: 10 }}>
-                <Image
-                  source={{ uri: selectedATM.logo }}
-                  style={{ width: 60, height: 60, borderRadius: 12 }}
-                  resizeMode="contain"
-                />
-              </View>
-            )}
-
+            {/* Retirer l'image ici */}
+            {/* Afficher le nom de la banque */}
             <Text style={[styles.modalTitle, { color: "#007bff", marginBottom: 4 }]}>
-              {selectedATM?.name}
+              {selectedATM?.bank}
             </Text>
 
-            {selectedATM?.distance !== undefined && (
-              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                <Ionicons name="walk-outline" size={18} color="#888" style={{ marginRight: 4 }} />
-                <Text style={{ color: isDark ? "#fff" : "#555", fontSize: 14 }}>
-                  {selectedATM.distance.toFixed(2)} km
-                </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8, gap: 16 }}>
+              <View style={{ marginBottom: 8 }}>
+                {/* Adresse avec icône */}
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+                  <Ionicons name="location-outline" size={18} color="#888" style={{ marginRight: 4 }} />
+                  <Text style={{ color: isDark ? "#fff" : "#555", fontSize: 14 }} numberOfLines={1}>
+                    {selectedATM?.address}
+                  </Text>
+                </View>
+                {/* Distance avec icône, sur une nouvelle ligne */}
+                {selectedATM?.distance !== undefined && (
+                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+                    <Ionicons name="walk-outline" size={18} color="#888" style={{ marginRight: 4 }} />
+                    <Text style={{ color: isDark ? "#fff" : "#555", fontSize: 14 }}>
+                      {selectedATM.distance.toFixed(2)} km
+                    </Text>
+                  </View>
+                )}
               </View>
-            )}
+            </View>
 
             <View style={{ height: 1, backgroundColor: "#eee", width: "100%", marginVertical: 10 }} />
 
