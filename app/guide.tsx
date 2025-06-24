@@ -1,8 +1,12 @@
+// app/guide.tsx
 import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, useColorScheme, Dimensions, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router'; // Remplace useRouter seul
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
+interface GuideScreenProps {
+  onComplete: () => void;
+}
 const { width } = Dimensions.get('window');
 
 const pages = [
@@ -46,7 +50,7 @@ const pages = [
   // Ajoutez d’autres pages ici
 ];
 
-export default function GuideScreen() {
+export default function GuideScreen({ onComplete }: GuideScreenProps) {
   const isDark = useColorScheme() === 'dark';
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -56,6 +60,14 @@ export default function GuideScreen() {
     surface: isDark ? '#1a1a2e' : '#ffffff',
     text: isDark ? '#f1f5f9' : '#1e293b',
     textSecondary: isDark ? '#94a3b8' : '#64748b',
+  };
+
+  const handlePress = () => {
+    if (fromHelp) {
+      router.back();
+    } else {
+      onComplete(); // Utilisation de la prop onComplete
+    }
   };
 
   return (
@@ -74,13 +86,7 @@ export default function GuideScreen() {
       ))}
       <TouchableOpacity
         style={[styles.startButton, { backgroundColor: '#3b82f6' }]}
-        onPress={() => {
-          if (fromHelp) {
-            router.back();
-          } else {
-            router.replace('/login');
-          }
-        }}
+        onPress={handlePress}
       >
         <Text style={styles.startButtonText}>
           {fromHelp ? 'Retour' : 'Commencer'}
