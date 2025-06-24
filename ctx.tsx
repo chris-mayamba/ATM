@@ -87,6 +87,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
 
   const login = async (email, password) => {
     try {
+
       // Use the correct method name for Appwrite v11+
       await account.createEmailSession(email, password);
       const currentUser = await account.get();
@@ -96,6 +97,11 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       console.error("Login error:", error);
       throw new Error(error.message || "Erreur de connexion");
     }
+    // Crée la nouvelle session
+    await account.createEmailSession(email, password);
+    const currentUser = await account.get();
+    setUser(currentUser);
+    router.replace('/(tabs)/home');
   };
 
   const loginWithGoogle = async () => {
