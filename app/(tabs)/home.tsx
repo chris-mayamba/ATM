@@ -24,6 +24,7 @@ import { lubumbashiATMs, bankColors } from "../../data/atmData";
 import { Databases, ID, Client, Query } from "appwrite";
 import TransportModal from "../../components/TransportModal";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import { router } from 'expo-router';
 
 const { width, height } = Dimensions.get("window");
 
@@ -914,7 +915,6 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
-      {/* Bouton d'aide en haut à droite */}
       {/* Bouton d'aide en haut à droite */}
       <TouchableOpacity
         style={[
