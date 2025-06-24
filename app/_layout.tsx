@@ -18,9 +18,24 @@ import {
 import { SplashScreen } from 'expo-router';
 import { useEffect } from 'react'
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import { useSession } from '@/ctx';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
+
+function ThemeWrapper() {
+  const { isDark } = useSession();
+  
+  return (
+    <>
+      <StatusBar 
+        barStyle={isDark ? "light-content" : "dark-content"} 
+        backgroundColor={isDark ? "#121212" : "#fff"}
+      />
+      <Slot />
+    </>
+  );
+}
 
 export default function Layout() {
   useFrameworkReady();
@@ -47,9 +62,8 @@ export default function Layout() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <SessionProvider>
-        <Slot />
+        <ThemeWrapper />
       </SessionProvider>
     </GestureHandlerRootView>
   );

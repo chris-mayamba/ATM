@@ -4,10 +4,13 @@
 // import { useRouter } from 'expo-router';
 // import { ActivityIndicator, View } from 'react-native';
 
+export default function Index() {
+  const { user, loading } = useSession();
+  const router = useRouter();
+
 // export default function Index() {
 //   const { user, loading } = useSession();
 //   const router = useRouter();
-
 
   
 //   useEffect(() => {

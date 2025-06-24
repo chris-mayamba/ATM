@@ -14,7 +14,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import { useSession } from "../../ctx";
+import { useSession } from "@/ctx";
 import { Client, Databases, Query, ID } from "appwrite";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -32,6 +32,9 @@ import {
   Key,
   Building2,
 } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import * as Location from "expo-location";
+import * as Permissions from "expo-permissions";
 
 const client = new Client()
   .setEndpoint("https://cloud.appwrite.io/v1")
@@ -49,6 +52,7 @@ export default function ProfileScreen() {
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(50)).current;
   const [showAllHistory, setShowAllHistory] = useState(false);
+  const router = useRouter();
 
   const toggleTheme = () => setIsDarkTheme((prev) => !prev);
 
@@ -133,6 +137,34 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  };
+
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission refusée",
+          "L'application a besoin de la permission de localisation pour fonctionner correctement.",
+          [
+            {
+              text: "Annuler",
+              style: "cancel",
+            },
+            {
+              text: "Ouvrir les paramètres",
+              onPress: () => Linking.openSettings(),
+            },
+          ]
+        );
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error("Erreur lors de la demande de permission:", err);
+      return false;
+    }
   };
 
   const StatCard = ({ icon: Icon, title, value, color }) => (
@@ -280,10 +312,6 @@ export default function ProfileScreen() {
                 <Text style={styles.profileEmail}>
                   {user?.email || "email@example.com"}
                 </Text>
-                <View style={styles.profileBadge}>
-                  <Star size={12} color="#ffffff" />
-                  <Text style={styles.profileBadgeText}>Membre Premium</Text>
-                </View>
               </View>
             </View>
 
@@ -296,25 +324,20 @@ export default function ProfileScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Stats Section */}
-        <View style={styles.statsContainer}>
-          <StatCard
-            icon={MapPin}
-            title="ATM Visités"
-            value={historique.length.toString()}
-            color={theme.primary}
-          />
-          <StatCard
-            icon={Clock}
-            title="Cette Semaine"
-            value="3"
-            color={theme.secondary}
-          />
-          <StatCard
-            icon={Star}
-            title="Points"
-            value="127"
-            color={theme.accent}
-          />
+        <View
+          style={[
+            styles.statsContainer,
+            { justifyContent: "center", alignItems: "center" },
+          ]}
+        >
+          <View style={{ width: 160 }}>
+            <StatCard
+              icon={MapPin}
+              title="ATM Visités"
+              value={historique.length.toString()}
+              color={theme.primary}
+            />
+          </View>
         </View>
 
         {/* Settings Section */}
@@ -331,84 +354,87 @@ export default function ProfileScreen() {
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
             Préférences
           </Text>
-
           <SettingItem
             icon={Moon}
             title="Thème sombre"
-            subtitle="Activer le mode sombre"
+            subtitle={isDarkTheme ? "Activé" : "Désactivé"}
             color={theme.accent}
             rightElement={
               <Switch
                 value={isDarkTheme}
                 onValueChange={toggleTheme}
-                trackColor={{ false: theme.border, true: theme.primary + "40" }}
-                thumbColor={isDarkTheme ? theme.primary : "#f4f3f4"}
+                trackColor={{ false: "#767577", true: "#81b0ff" }}
+                thumbColor={isDarkTheme ? "#f5dd4b" : "#f4f3f4"}
               />
             }
           />
 
           <SettingItem
-            icon={Key}
-            title="Permissions"
-            subtitle="Gérer les autorisations"
-            color={theme.secondary}
-            onPress={() => {}}
-          />
-
-          <SettingItem
             icon={Shield}
             title="Confidentialité"
-            subtitle="Paramètres de confidentialité"
+            subtitle="Gérer vos paramètres"
             color={theme.primary}
-            onPress={() => {}}
+            onPress={() => router.push("/settings/privacy")}
           />
         </Animated.View>
-        
-      {/* History Section */}
-      <Animated.View 
-        style={[
-          styles.section,
-          { 
-            backgroundColor: theme.surface,
-            transform: [{ translateY: slideAnim }],
-            opacity: fadeAnim,
-          }
-        ]}
-      >
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Historique Récent</Text>
-          <TouchableOpacity onPress={() => setShowAllHistory(!showAllHistory)}>
-            <Text style={[styles.seeAllText, { color: theme.primary }]}>
-              {showAllHistory ? 'Réduire' : 'Voir tout'}
-            </Text>
-          </TouchableOpacity>
-        </View>
 
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.primary} />
-            <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-              Chargement de l'historique...
+        {/* History Section */}
+        <Animated.View
+          style={[
+            styles.section,
+            {
+              backgroundColor: theme.surface,
+              transform: [{ translateY: slideAnim }],
+              opacity: fadeAnim,
+            },
+          ]}
+        >
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              Historique Récent
             </Text>
+            <TouchableOpacity
+              onPress={() => setShowAllHistory(!showAllHistory)}
+            >
+              <Text style={[styles.seeAllText, { color: theme.primary }]}>
+                {showAllHistory ? "Réduire" : "Voir tout"}
+              </Text>
+            </TouchableOpacity>
           </View>
-        ) : historique.length > 0 ? (
-          <FlatList
-            data={showAllHistory ? historique : historique.slice(0, 3)}
-            keyExtractor={(item) => item.$id}
-            renderItem={({ item, index }) => <HistoryItem item={item} index={index} />}
-            scrollEnabled={false}
-            ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-          />
-        ) : (
-          <View style={styles.emptyContainer}>
-            <FileText size={48} color={theme.textSecondary} />
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>Aucun historique</Text>
-            <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-              Vos visites d'ATM apparaîtront ici
-            </Text>
-          </View>
-        )}
-      </Animated.View>
+
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.primary} />
+              <Text
+                style={[styles.loadingText, { color: theme.textSecondary }]}
+              >
+                Chargement de l'historique...
+              </Text>
+            </View>
+          ) : historique.length > 0 ? (
+            <FlatList
+              data={showAllHistory ? historique : historique.slice(0, 3)}
+              keyExtractor={(item) => item.$id}
+              renderItem={({ item, index }) => (
+                <HistoryItem item={item} index={index} />
+              )}
+              scrollEnabled={false}
+              ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+            />
+          ) : (
+            <View style={styles.emptyContainer}>
+              <FileText size={48} color={theme.textSecondary} />
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                Aucun historique
+              </Text>
+              <Text
+                style={[styles.emptySubtitle, { color: theme.textSecondary }]}
+              >
+                Vos visites d'ATM apparaîtront ici
+              </Text>
+            </View>
+          )}
+        </Animated.View>
 
         {/* Logout Section */}
         <Animated.View
@@ -420,30 +446,29 @@ export default function ProfileScreen() {
             },
           ]}
         >
-          <TouchableOpacity
-
-            style={[
-              styles.logoutButton,
-              {
-                backgroundColor: theme.error + "10",
-                borderColor: theme.error + "30",
-              },
-            ]}
-        
-            onPress={handleLogout}
-            disabled={logoutLoading}
+          <LinearGradient
+            colors={["#ef4444", "#f97316"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.logoutButton}
           >
-            {logoutLoading ? (
-              <ActivityIndicator size="small" color={theme.error} />
-            ) : (
-              <LogOut size={24} color={theme.error} />
-            )}
-            <Text style={[styles.logoutText, { color: theme.error }]}>
-              {logoutLoading ? "Déconnexion..." : "Se déconnecter"}
-            </Text>
-         </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              disabled={logoutLoading}
+              activeOpacity={0.7}
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              {logoutLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <LogOut size={22} color="#fff" />
+              )}
+              <Text style={styles.logoutText}>
+                {logoutLoading ? "Déconnexion..." : "Se déconnecter"}
+              </Text>
+            </TouchableOpacity>
+          </LinearGradient>
         </Animated.View>
-
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -689,13 +714,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: "#dc2626",
     gap: 8,
   },
   logoutText: {
     fontSize: 16,
-    fontFamily: "Inter-SemiBold",
+    fontFamily: "Poppins-SemiBold",
+    color: "#ffffff",
   },
 });
