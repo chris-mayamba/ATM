@@ -157,7 +157,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       await account.create("unique()", email, password, name);
 
       // Login after registration
-      await account.createEmailPasswordSession(email, password);
+      await account.createEmailSession(email, password);
 
       // Get user data
       const currentUser = await account.get();
